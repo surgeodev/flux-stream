@@ -8,8 +8,18 @@ import TVPage from '@/pages/tv/[id]'
 import Watch from '@/pages/watch'
 import { Route, Switch, Router as WouterRouter } from 'wouter'
 import { Toaster } from '@/components/ui/toaster'
+import { BASE_PATH } from '@/lib/base-path'
 
 const queryClient = new QueryClient()
+
+const redirect = sessionStorage.getItem('flux-redirect')
+if (redirect) {
+  sessionStorage.removeItem('flux-redirect')
+  const target = `${BASE_PATH}${redirect}`
+  if (window.location.pathname + window.location.search !== target) {
+    window.history.replaceState(null, '', target)
+  }
+}
 
 function Router() {
   return (
@@ -28,7 +38,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter>
+        <WouterRouter base={BASE_PATH}>
           <Router />
         </WouterRouter>
       </TooltipProvider>

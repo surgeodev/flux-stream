@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'wouter'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
+import { withBase } from '@/lib/base-path'
 
 export function Navbar() {
   const [, setLocation] = useLocation()
@@ -17,7 +18,7 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5 py-2 md:py-3">
       <div className="container mx-auto px-3 md:px-6 flex items-center justify-between gap-2 md:gap-4">
         <Link href="/" className="flex items-center gap-2 z-10 shrink-0">
-          <img src="/logo.png" alt="FLUX" width={120} height={28} className="h-6 md:h-7 w-auto" />
+          <img src={withBase('/logo.png')} alt="FLUX" width={120} height={28} className="h-6 md:h-7 w-auto" />
         </Link>
 
         <div className="flex-1 max-w-xl">
