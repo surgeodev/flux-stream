@@ -210,14 +210,29 @@ export type StreamSource = {
 
 export const CLOUDFLARE_WORKER = 'https://flux-stream-api.surgeodev.workers.dev'
 export const LOCAL_API = 'http://localhost:8787'
+export const LOCAL_API_ALT = 'http://127.0.0.1:8787'
+
+async function detectLocalApi(): Promise<string | null> {
+  for (const base of [LOCAL_API, LOCAL_API_ALT]) {
+    const ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(1500) })
+      .then(r => r.ok)
+      .catch(() => false)
+    if (ok) return base
+  }
+  return null
+}
 
 export async function getIframeSources(id: number, type: string, season?: number, episode?: number): Promise<StreamSource[]> {
   const sources: StreamSource[] = []
 
-  const localOk = await fetch(`${LOCAL_API}/api/health`, { signal: AbortSignal.timeout(2000) })
-    .then(r => r.ok)
-    .catch(() => false)
-  if (localOk) {
+  const localBase = await detectLocalApi()
+  if (localBase) {
+    sources.push({
+      name: 'Flux direct (local)',
+      kind: 'hls',
+      hlsUrl: `${localBase}/api/streams/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
+    })
+  } else {
     sources.push({
       name: 'Flux direct (local)',
       kind: 'hls',

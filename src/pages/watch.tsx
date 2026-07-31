@@ -1,22 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearch, Link } from 'wouter'
-import { ChevronLeft, ChevronRight, Monitor, Maximize, Shuffle, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Monitor, Maximize, Minimize, Shuffle, Play, Clock, Calendar, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getMovie, getTVShow, getCatalog, getTrending, bgPath, type MediaItem } from '@/hooks/use-tmdb'
+import { getMovie, getTVShow, getCatalog, getTrending, bgPath, imgPath, type MediaItem } from '@/hooks/use-tmdb'
 import { useStream } from '@/hooks/use-stream'
 import { MediaCard } from '@/components/media-card'
 import { VideoPlayer } from '@/components/video-player'
 
-function useIsSmallLandscape() {
-  const [is, setIs] = useState(() => typeof window !== 'undefined'
-    && window.matchMedia('(orientation: landscape) and (max-height: 700px)').matches)
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
   useEffect(() => {
-    const mq = window.matchMedia('(orientation: landscape) and (max-height: 700px)')
-    const fn = () => setIs(mq.matches)
+    const mq = window.matchMedia(query)
+    const fn = () => setMatches(mq.matches)
     mq.addEventListener('change', fn)
     return () => mq.removeEventListener('change', fn)
-  }, [])
-  return is
+  }, [query])
+  return matches
 }
 
 export default function Watch() {
@@ -32,38 +31,15 @@ export default function Watch() {
   const [media, setMedia] = useState<MediaItem | null>(null)
   const [related, setRelated] = useState<MediaItem[]>([])
   const [pageLoading, setPageLoading] = useState(true)
-  const [showSources, setShowSources] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [showUi, setShowUi] = useState(true)
-  const playerRef = useRef<HTMLDivElement>(null)
-  const uiTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const isSmallLandscape = useIsSmallLandscape()
-
-  const revealUi = useCallback(() => {
-    setShowUi(true)
-    clearTimeout(uiTimer.current)
-    uiTimer.current = setTimeout(() => setShowUi(false), 4000)
-  }, [])
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const playerBoxRef = useRef<HTMLDivElement>(null)
+  const isSmallLandscape = useMediaQuery('(orientation: landscape) and (max-height: 700px)')
 
   useEffect(() => {
-    document.addEventListener('mousemove', revealUi)
-    revealUi()
-    return () => {
-      document.removeEventListener('mousemove', revealUi)
-      clearTimeout(uiTimer.current)
-    }
-  }, [revealUi])
-
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      playerRef.current?.requestFullscreen().catch(() => {})
-    } else {
-      document.exitFullscreen().catch(() => {})
-    }
-  }, [])
-
-  const shuffleRelated = useCallback(() => {
-    setRelated(prev => [...prev].sort(() => Math.random() - 0.5))
+    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
   }, [])
 
   useEffect(() => {
@@ -89,142 +65,32 @@ export default function Watch() {
     if (id) fetchStream(type, id, s, e)
   }, [id, type, s, e])
 
+  const shuffleRelated = useCallback(() => {
+    setRelated(prev => [...prev].sort(() => Math.random() - 0.5))
+  }, [])
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      playerBoxRef.current?.requestFullscreen().catch(() => {})
+    } else {
+      document.exitFullscreen().catch(() => {})
+    }
+  }, [])
+
   const isReady = (iframeUrl || hlsUrl) && !loading && !pageLoading
   const backdropUrl = media?.backdrop ? bgPath(media.backdrop) : null
+  const posterUrl = media?.img ? imgPath(media.img) : null
 
   if (!id) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <p className="text-muted-foreground">Paramètres manquants</p>
       </div>
     )
   }
 
-  if (isSmallLandscape) {
-    return (
-      <div className="relative h-dvh w-screen bg-black select-none flex flex-col">
-        {backdropUrl && (
-          <div className="absolute inset-0 opacity-[0.06] pointer-events-none">
-            <img src={backdropUrl} alt="" className="w-full h-full object-cover" />
-          </div>
-        )}
-
-        <div ref={playerRef} className="relative w-full h-[52dvh] flex-shrink-0 z-10 bg-black">
-          {isReady && iframeUrl ? (
-            <iframe
-              key={`${activeIdx}-${id}-${s}-${e}`}
-              src={iframeUrl}
-              className="absolute inset-0 w-full h-full border-0 bg-black"
-              allowFullScreen
-              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          ) : isReady && hlsUrl ? (
-            <VideoPlayer hlsUrl={hlsUrl} tmdbId={Number(id)} mediaType={type} title={media?.title} />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-black">
-              {loading || pageLoading ? (
-                <div className="w-9 h-9 border-2 border-primary/30 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <p className="text-sm text-muted-foreground/60">{error || 'Aucun flux'}</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="relative z-10 flex-1 min-h-0 overflow-y-auto bg-black/80 backdrop-blur-sm px-3 py-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <Link
-              href={type === 'movie' ? `/movie/${id}` : `/tv/${id}`}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all hover:bg-white/20"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Link>
-            {media && (
-              <h1 className="text-sm font-semibold text-white/90 truncate flex-1 min-w-0 text-center">
-                {media.title}
-                {media.year && <span className="text-white/40 font-normal ml-1.5">{media.year}</span>}
-              </h1>
-            )}
-            {sources.length > 1 && (
-              <div className="relative">
-                <button onClick={() => setShowSources(!showSources)}
-                  className="flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-full transition-all text-white/80 hover:text-white">
-                  <Monitor className="w-3 h-3" />
-                  <span className="max-w-[90px] truncate">{sourceName}</span>
-                </button>
-                {showSources && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowSources(false)} />
-                    <div className="absolute right-0 top-full mt-2 z-20 min-w-[170px] bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 shadow-2xl">
-                      {sources.map((src, i) => (
-                        <button key={i} onClick={() => { switchSource(i); setShowSources(false) }}
-                          className={cn('block w-full text-left px-3 py-2 text-xs rounded-lg transition-colors', i === activeIdx ? 'bg-primary/20 text-primary font-medium' : 'text-white/70 hover:bg-white/5')}>
-                          <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-2', i === activeIdx ? 'bg-primary' : 'bg-transparent')} />
-                          {src.name}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {type === 'tv' && (
-            <div className="flex items-center gap-2 justify-center mb-2">
-              <Link
-                href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${Math.max(1, e - 1)}`}
-                className={cn('flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-full transition-all text-white/80 hover:text-white', e <= 1 && 'opacity-30 pointer-events-none')}
-              >
-                <ChevronLeft className="w-3 h-3" />
-                <span>Préc.</span>
-              </Link>
-              <span className="text-xs font-semibold text-white/60 px-1">S{s}·E{e}</span>
-              <Link
-                href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${e + 1}`}
-                className="flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-full transition-all text-white/80 hover:text-white"
-              >
-                <span>Suiv.</span>
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-          )}
-
-          {media?.overview && (
-            <p className="text-xs text-white/50 leading-relaxed line-clamp-3 text-center mb-2">{media.overview}</p>
-          )}
-
-          {related.length > 0 && (
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-white/60">Suggestions</h3>
-              <div className="flex items-center gap-1">
-                <button onClick={shuffleRelated} className="text-white/40 hover:text-white/80 transition-colors p-1.5">
-                  <Shuffle className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-            {related.map(m => (
-              <div key={m.id} className="flex-shrink-0 w-24">
-                <MediaCard item={m} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div ref={playerRef} className="relative h-screen w-screen overflow-hidden bg-black select-none">
-      {backdropUrl && (
-        <div className="absolute inset-0 opacity-[0.06] pointer-events-none">
-          <img src={backdropUrl} alt="" className="w-full h-full object-cover" />
-        </div>
-      )}
-
+  const playerContent = (
+    <>
       {isReady && iframeUrl ? (
         <iframe
           key={`${activeIdx}-${id}-${s}-${e}`}
@@ -243,122 +109,183 @@ export default function Watch() {
           )}
           <div className="relative z-10 flex flex-col items-center gap-3">
             {loading || pageLoading ? (
-              <div className="w-9 h-9 border-2 border-primary/30 border-t-transparent rounded-full animate-spin" />
+              <div className="w-10 h-10 border-2 border-primary/30 border-t-transparent rounded-full animate-spin" />
             ) : (
               <p className="text-sm text-muted-foreground/60">{error || 'Aucun flux'}</p>
             )}
           </div>
         </div>
       )}
+    </>
+  )
 
-      {/* Top bar */}
-      <div className={`absolute inset-x-0 top-0 z-30 transition-opacity duration-500 pointer-events-none ${showUi ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="bg-gradient-to-b from-black/70 via-black/20 to-transparent pt-3 pb-14 px-3 md:pt-4 md:pb-20 md:px-5">
-          <div className="flex items-center justify-between pointer-events-auto">
+  return (
+    <div className="min-h-dvh bg-background text-foreground">
+      {/* ===== Player (sticky top) ===== */}
+      <div ref={playerBoxRef}
+        className={cn('relative w-full bg-black overflow-hidden', isFullscreen && 'min-h-dvh flex items-center justify-center')}>
+        <div className={cn('relative w-full', !isFullscreen && 'aspect-video', isSmallLandscape && !isFullscreen && 'max-h-[52dvh]')}>
+          {playerContent}
+
+          {/* Back button overlay */}
+          {!isFullscreen && (
             <Link
               href={type === 'movie' ? `/movie/${id}` : `/tv/${id}`}
-              className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 text-white/80 hover:text-white border border-white/10 transition-all hover:bg-black/70"
+              className="absolute top-3 left-3 z-20 w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white border border-white/10 transition-all backdrop-blur-md"
             >
-              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+              <ChevronLeft className="w-5 h-5" />
             </Link>
-            <div className="flex items-center gap-1.5 md:gap-2 pointer-events-auto">
-              {sources.length > 1 && (
-                <div className="relative">
-                  <button onClick={() => setShowSources(!showSources)}
-                    className="flex items-center gap-1 text-xs bg-black/50 hover:bg-black/70 border border-white/10 px-2 py-1.5 md:px-3 md:py-1.5 rounded-full transition-all text-white/80 hover:text-white backdrop-blur-sm">
-                    <Monitor className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    <span className="hidden sm:inline text-xs">{sourceName}</span>
-                  </button>
-                  {showSources && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setShowSources(false)} />
-                      <div className="absolute right-0 top-full mt-2 z-20 min-w-[170px] bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 shadow-2xl">
-                        {sources.map((src, i) => (
-                          <button key={i} onClick={() => { switchSource(i); setShowSources(false) }}
-                            className={cn('block w-full text-left px-3 py-2 text-xs rounded-lg transition-colors', i === activeIdx ? 'bg-primary/20 text-primary font-medium' : 'text-white/70 hover:bg-white/5')}>
-                            <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-2', i === activeIdx ? 'bg-primary' : 'bg-transparent')} />
-                            {src.name}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              {related.length > 0 && (
-                <button onClick={() => setShowSuggestions(v => !v)}
-                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white/80 hover:text-white border border-white/10 transition-all backdrop-blur-sm">
-                  <span className="text-xs md:text-sm font-semibold">+{related.length}</span>
-                </button>
-              )}
-              {!hlsUrl && (
-                <button onClick={toggleFullscreen}
-                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white/80 hover:text-white border border-white/10 transition-all backdrop-blur-sm">
-                  <Maximize className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                </button>
-              )}
-            </div>
-          </div>
+          )}
+
+          {/* Fullscreen toggle */}
+          <button onClick={toggleFullscreen}
+            className="absolute top-3 right-3 z-20 w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white border border-white/10 transition-all backdrop-blur-md">
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      {/* Bottom bar - minimal */}
-      <div className={`absolute inset-x-0 bottom-0 z-30 transition-opacity duration-500 pointer-events-none ${showUi && !showSuggestions ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-20 pb-4 px-4 md:pt-32 md:pb-6 md:px-6">
-          <div className="pointer-events-auto">
-            {type === 'tv' && media && (
-              <div className="flex items-center gap-2 md:gap-3">
-                <Link
-                  href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${Math.max(1, e - 1)}`}
-                  className={cn('flex items-center gap-1 text-xs md:text-sm bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 md:px-4 md:py-2 rounded-full transition-all text-white/80 hover:text-white', e <= 1 && 'opacity-30 pointer-events-none')}
-                >
-                  <ChevronLeft className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                  <span>Préc.</span>
-                </Link>
-                <span className="text-xs md:text-sm font-semibold text-white/60 px-1">S{s}·E{e}</span>
-                <Link
-                  href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${e + 1}`}
-                  className="flex items-center gap-1 text-xs md:text-sm bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 md:px-4 md:py-2 rounded-full transition-all text-white/80 hover:text-white"
-                >
-                  <span>Suiv.</span>
-                  <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                </Link>
-              </div>
+      <main className={cn('mx-auto px-4 md:px-6 w-full', isFullscreen ? 'hidden' : 'max-w-5xl py-5 md:py-8 space-y-7 md:space-y-9')}>
+        {/* ===== Title + meta ===== */}
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
+              {media?.title || title}
+            </h1>
+            {media?.rating ? (
+              <span className="flex items-center gap-1 text-sm md:text-base font-semibold text-yellow-400">
+                <Star className="w-4 h-4 fill-current" />
+                {media.rating.toFixed(1)}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
+            {media?.year ? (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                {media.year}
+              </span>
+            ) : null}
+            {type === 'tv' && media?.seasons ? (
+              <span className="flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5" />
+                {media.seasons} saisons
+              </span>
+            ) : null}
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {type === 'movie' ? 'Film' : `Saison ${s} · Épisode ${e}`}
+            </span>
+            {media?.genres?.map(g => (
+              <span key={g}
+                className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/70">
+                {g}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== Sources selector (always visible) ===== */}
+        <section className="space-y-2.5">
+          <div className="flex items-center gap-2">
+            <Monitor className="w-4 h-4 text-primary" />
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sources</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {sources.map((src, i) => (
+              <button key={i}
+                onClick={() => switchSource(i)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border backdrop-blur-sm',
+                  i === activeIdx
+                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-[1.02]'
+                    : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                )}>
+                <span className={cn('w-1.5 h-1.5 rounded-full', i === activeIdx ? 'bg-white' : 'bg-white/25')} />
+                {src.name}
+                {i === activeIdx && <Play className="w-3.5 h-3.5 fill-current" />}
+              </button>
+            ))}
+            {sources.length === 0 && !loading && (
+              <p className="text-sm text-muted-foreground/60">{error || 'Aucune source disponible'}</p>
             )}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Suggestions panel */}
-      {showSuggestions && (
-        <div className="absolute inset-x-0 bottom-0 z-40 bg-black/90 backdrop-blur-md border-t border-white/10"
-          style={{ maxHeight: '45vh' }}>
-          <div className="flex items-center justify-between px-4 pt-3 pb-1">
-            <h3 className="text-xs md:text-sm font-semibold text-white/80">
-              {type === 'tv' ? 'Continuer votre vision' : 'Suggestions'}
-            </h3>
-            <div className="flex items-center gap-1">
+        {/* ===== Overview ===== */}
+        {media?.overview && (
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Synopsis</h2>
+            <p className="text-sm md:text-base text-white/70 leading-relaxed max-w-3xl">{media.overview}</p>
+          </section>
+        )}
+
+        {/* ===== TV episode nav ===== */}
+        {type === 'tv' && (
+          <section className="space-y-2.5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Épisodes</h2>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${Math.max(1, e - 1)}`}
+                className={cn(
+                  'flex items-center gap-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 rounded-xl transition-all text-white/80 hover:text-white',
+                  e <= 1 && 'opacity-30 pointer-events-none'
+                )}>
+                <ChevronLeft className="w-4 h-4" />
+                Épisode {Math.max(1, e - 1)}
+              </Link>
+              <span className="text-sm font-bold text-white/90 px-2 py-2.5 bg-primary/10 border border-primary/20 rounded-xl min-w-[64px] text-center">
+                S{s}·E{e}
+              </span>
+              <Link
+                href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${e + 1}`}
+                className="flex items-center gap-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 rounded-xl transition-all text-white/80 hover:text-white">
+                Épisode {e + 1}
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {/* ===== Suggestions ===== */}
+        {related.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Suggestions
+              </h2>
               <button onClick={shuffleRelated}
-                className="text-white/40 hover:text-white/80 transition-colors p-1.5">
-                <Shuffle className="w-3 h-3" />
-              </button>
-              <button onClick={() => setShowSuggestions(false)}
-                className="text-white/40 hover:text-white/80 transition-colors p-1">
-                <X className="w-3.5 h-3.5" />
+                className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/90 transition-colors">
+                <Shuffle className="w-3.5 h-3.5" />
+                Mélanger
               </button>
             </div>
-          </div>
-          <div className="overflow-x-auto px-4 pb-4 scrollbar-thin">
-            <div className="flex gap-2 md:gap-3">
+            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin snap-x">
               {related.map(m => (
-                <div key={m.id} className="flex-shrink-0 w-28 md:w-36">
+                <div key={m.id} className="flex-shrink-0 w-32 md:w-44 snap-start">
                   <MediaCard item={m} />
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
+          </section>
+        )}
+
+        {/* ===== Poster + footer credits ===== */}
+        {posterUrl && (
+          <section className="flex items-center gap-4 pt-2 border-t border-white/5">
+            <img src={posterUrl} alt="" className="w-14 h-20 md:w-16 md:h-24 object-cover rounded-lg border border-white/10" />
+            <div className="space-y-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{media?.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {type === 'movie' ? 'Film' : 'Série'} · {media?.year || ''}
+                {media?.rating ? ` · ${media.rating.toFixed(1)}/10` : ''}
+              </p>
+              <p className="text-xs text-white/40">Proposé par FLUX · {sourceName || ''}</p>
+            </div>
+          </section>
+        )}
+      </main>
     </div>
   )
 }
