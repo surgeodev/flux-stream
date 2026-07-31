@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearch, Link } from 'wouter'
-import { ChevronLeft, ChevronRight, Star, Monitor, Maximize, Minimize, Shuffle, Play, Clock, Calendar, Layers } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Monitor, Maximize, Shuffle, Calendar, Clapperboard, Tv } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getMovie, getTVShow, getCatalog, getTrending, bgPath, imgPath, type MediaItem } from '@/hooks/use-tmdb'
 import { useStream } from '@/hooks/use-stream'
@@ -31,7 +31,6 @@ export default function Watch() {
   const [media, setMedia] = useState<MediaItem | null>(null)
   const [related, setRelated] = useState<MediaItem[]>([])
   const [pageLoading, setPageLoading] = useState(true)
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const playerBoxRef = useRef<HTMLDivElement>(null)
   const isSmallLandscape = useMediaQuery('(orientation: landscape) and (max-height: 700px)')
@@ -45,7 +44,6 @@ export default function Watch() {
   useEffect(() => {
     window.scrollTo(0, 0)
     setPageLoading(true)
-    setShowSuggestions(false)
 
     Promise.all([
       type === 'movie' ? getMovie(Number(id)) : getTVShow(Number(id)),
@@ -79,7 +77,7 @@ export default function Watch() {
 
   const isReady = (iframeUrl || hlsUrl) && !loading && !pageLoading
   const backdropUrl = media?.backdrop ? bgPath(media.backdrop) : null
-  const posterUrl = media?.img ? imgPath(media.img) : null
+  const isIframe = Boolean(iframeUrl)
 
   if (!id) {
     return (
@@ -121,90 +119,94 @@ export default function Watch() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      {/* ===== Player (sticky top) ===== */}
-      <div ref={playerBoxRef}
-        className={cn('relative w-full bg-black overflow-hidden', isFullscreen && 'min-h-dvh flex items-center justify-center')}>
-        <div className={cn('relative w-full', !isFullscreen && 'aspect-video', isSmallLandscape && !isFullscreen && 'max-h-[52dvh]')}>
-          {playerContent}
+      {/* ===== Hero / Player ===== */}
+      <div className="relative">
+        {backdropUrl && !isFullscreen && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <img src={backdropUrl} alt="" className="w-full h-full object-cover opacity-[0.14]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+          </div>
+        )}
 
-          {/* Back button overlay */}
-          {!isFullscreen && (
+        <div ref={playerBoxRef} className={cn('relative w-full', isFullscreen && 'min-h-dvh flex items-center justify-center bg-black')}>
+          <div className={cn(
+            'relative w-full bg-black overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10',
+            isFullscreen
+              ? 'min-h-dvh'
+              : 'aspect-video md:rounded-2xl md:mt-6 md:max-w-5xl md:mx-auto md:ring-white/5',
+            isSmallLandscape && !isFullscreen && 'max-h-[52dvh] rounded-none mt-0 max-w-full'
+          )}>
+            {playerContent}
+
+            {/* Back button */}
             <Link
               href={type === 'movie' ? `/movie/${id}` : `/tv/${id}`}
-              className="absolute top-3 left-3 z-20 w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white border border-white/10 transition-all backdrop-blur-md"
+              className="absolute top-3 left-3 z-20 w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/15 transition-all backdrop-blur-md"
             >
               <ChevronLeft className="w-5 h-5" />
             </Link>
-          )}
 
-          {/* Fullscreen toggle */}
-          <button onClick={toggleFullscreen}
-            className="absolute top-3 right-3 z-20 w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white border border-white/10 transition-all backdrop-blur-md">
-            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-          </button>
+            {/* Fullscreen — only for iframes (VideoPlayer has its own) */}
+            {isIframe && (
+              <button onClick={toggleFullscreen}
+                className="absolute top-3 right-3 z-20 w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/15 transition-all backdrop-blur-md">
+                {isFullscreen ? <ChevronLeft className="w-4 h-4 rotate-45" /> : <Maximize className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <main className={cn('mx-auto px-4 md:px-6 w-full', isFullscreen ? 'hidden' : 'max-w-5xl py-5 md:py-8 space-y-7 md:space-y-9')}>
+      <main className={cn('mx-auto w-full px-5 md:px-6', isFullscreen ? 'hidden' : 'max-w-5xl pb-20')}>
         {/* ===== Title + meta ===== */}
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight leading-tight">
-              {media?.title || title}
-            </h1>
+        <section className="pt-6 md:pt-10">
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight text-white">
+            {media?.title || title}
+          </h1>
+
+          <div className="mt-3 md:mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-white/45">
             {media?.rating ? (
-              <span className="flex items-center gap-1 text-sm md:text-base font-semibold text-yellow-400">
+              <span className="flex items-center gap-1.5 font-semibold text-amber-400/90">
                 <Star className="w-4 h-4 fill-current" />
                 {media.rating.toFixed(1)}
+                <span className="text-white/25 font-normal">/10</span>
               </span>
             ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
             {media?.year ? (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 {media.year}
               </span>
             ) : null}
-            {type === 'tv' && media?.seasons ? (
-              <span className="flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5" />
-                {media.seasons} saisons
-              </span>
-            ) : null}
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1.5 capitalize">
+              {type === 'movie' ? <Clapperboard className="w-3.5 h-3.5" /> : <Tv className="w-3.5 h-3.5" />}
               {type === 'movie' ? 'Film' : `Saison ${s} · Épisode ${e}`}
             </span>
-            {media?.genres?.map(g => (
-              <span key={g}
-                className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/70">
-                {g}
-              </span>
+            {media?.genres?.slice(0, 3).map(g => (
+              <span key={g} className="text-white/35">{g}</span>
             ))}
           </div>
         </section>
 
-        {/* ===== Sources selector (always visible) ===== */}
-        <section className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Monitor className="w-4 h-4 text-primary" />
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sources</h2>
+        {/* ===== Sources ===== */}
+        <section className="mt-7 md:mt-9">
+          <div className="flex items-center gap-2 mb-3">
+            <Monitor className="w-4 h-4 text-white/40" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">Sources</h2>
+            <span className="h-px flex-1 bg-white/5" />
           </div>
           <div className="flex flex-wrap gap-2">
             {sources.map((src, i) => (
               <button key={i}
                 onClick={() => switchSource(i)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border backdrop-blur-sm',
+                  'group flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200 border',
                   i === activeIdx
-                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-[1.02]'
-                    : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                    ? 'bg-primary/90 text-white border-primary shadow-lg shadow-primary/20 scale-[1.03]'
+                    : 'bg-white/[0.04] text-white/55 border-white/10 hover:bg-white/[0.09] hover:text-white hover:border-white/20'
                 )}>
-                <span className={cn('w-1.5 h-1.5 rounded-full', i === activeIdx ? 'bg-white' : 'bg-white/25')} />
+                <span className={cn('w-1.5 h-1.5 rounded-full transition-colors', i === activeIdx ? 'bg-white' : 'bg-white/20 group-hover:bg-white/50')} />
                 {src.name}
-                {i === activeIdx && <Play className="w-3.5 h-3.5 fill-current" />}
               </button>
             ))}
             {sources.length === 0 && !loading && (
@@ -215,33 +217,33 @@ export default function Watch() {
 
         {/* ===== Overview ===== */}
         {media?.overview && (
-          <section className="space-y-2">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Synopsis</h2>
-            <p className="text-sm md:text-base text-white/70 leading-relaxed max-w-3xl">{media.overview}</p>
+          <section className="mt-8 md:mt-10 max-w-2xl">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40 mb-3">Synopsis</h2>
+            <p className="text-[15px] leading-relaxed text-white/65">{media.overview}</p>
           </section>
         )}
 
         {/* ===== TV episode nav ===== */}
         {type === 'tv' && (
-          <section className="space-y-2.5">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Épisodes</h2>
+          <section className="mt-8 md:mt-10">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40 mb-3">Épisodes</h2>
             <div className="flex items-center gap-2">
               <Link
                 href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${Math.max(1, e - 1)}`}
                 className={cn(
-                  'flex items-center gap-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 rounded-xl transition-all text-white/80 hover:text-white',
-                  e <= 1 && 'opacity-30 pointer-events-none'
+                  'flex items-center gap-1.5 text-[13px] bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 px-4 py-2 rounded-full transition-all text-white/60 hover:text-white',
+                  e <= 1 && 'opacity-25 pointer-events-none'
                 )}>
                 <ChevronLeft className="w-4 h-4" />
-                Épisode {Math.max(1, e - 1)}
+                Précédent
               </Link>
-              <span className="text-sm font-bold text-white/90 px-2 py-2.5 bg-primary/10 border border-primary/20 rounded-xl min-w-[64px] text-center">
+              <span className="text-sm font-semibold text-white/90 px-3 py-2 bg-white/[0.06] border border-white/10 rounded-full min-w-[72px] text-center">
                 S{s}·E{e}
               </span>
               <Link
                 href={`/watch?type=tv&id=${id}&title=${encodeURIComponent(title)}&s=${s}&e=${e + 1}`}
-                className="flex items-center gap-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 rounded-xl transition-all text-white/80 hover:text-white">
-                Épisode {e + 1}
+                className="flex items-center gap-1.5 text-[13px] bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 px-4 py-2 rounded-full transition-all text-white/60 hover:text-white">
+                Suivant
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -250,38 +252,23 @@ export default function Watch() {
 
         {/* ===== Suggestions ===== */}
         {related.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <section className="mt-10 md:mt-12">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
                 Suggestions
               </h2>
               <button onClick={shuffleRelated}
-                className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/90 transition-colors">
+                className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/80 transition-colors">
                 <Shuffle className="w-3.5 h-3.5" />
                 Mélanger
               </button>
             </div>
-            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin snap-x">
+            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-3 -mx-1 px-1 scrollbar-thin snap-x">
               {related.map(m => (
                 <div key={m.id} className="flex-shrink-0 w-32 md:w-44 snap-start">
                   <MediaCard item={m} />
                 </div>
               ))}
-            </div>
-          </section>
-        )}
-
-        {/* ===== Poster + footer credits ===== */}
-        {posterUrl && (
-          <section className="flex items-center gap-4 pt-2 border-t border-white/5">
-            <img src={posterUrl} alt="" className="w-14 h-20 md:w-16 md:h-24 object-cover rounded-lg border border-white/10" />
-            <div className="space-y-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{media?.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {type === 'movie' ? 'Film' : 'Série'} · {media?.year || ''}
-                {media?.rating ? ` · ${media.rating.toFixed(1)}/10` : ''}
-              </p>
-              <p className="text-xs text-white/40">Proposé par FLUX · {sourceName || ''}</p>
             </div>
           </section>
         )}

@@ -212,6 +212,12 @@ export const CLOUDFLARE_WORKER = 'https://flux-stream-api.surgeodev.workers.dev'
 export const LOCAL_API = 'http://localhost:8787'
 export const LOCAL_API_ALT = 'http://127.0.0.1:8787'
 
+export const IFRAME_SOURCES = [
+  { name: 'VidSrc #1', movie: (i: number) => `https://vidsrcme.ru/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrcme.ru/embed/tv/${i}/${s}/${e}` },
+  { name: 'VidSrc #2', movie: (i: number) => `https://vsembed.ru/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vsembed.ru/embed/tv/${i}/${s}/${e}` },
+  { name: 'VidSrc #3', movie: (i: number) => `https://vidsrc.su/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.su/embed/tv/${i}/${s}/${e}` },
+]
+
 async function detectLocalApi(): Promise<string | null> {
   for (const base of [LOCAL_API, LOCAL_API_ALT]) {
     const ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(1500) })
@@ -225,20 +231,19 @@ async function detectLocalApi(): Promise<string | null> {
 export async function getIframeSources(id: number, type: string, season?: number, episode?: number): Promise<StreamSource[]> {
   const sources: StreamSource[] = []
 
+  const iframes: StreamSource[] = IFRAME_SOURCES.map(s => ({
+    name: s.name,
+    kind: 'iframe' as const,
+    iframeUrl: type === 'tv' ? s.tv(id, season || 1, episode || 1) : s.movie(id),
+  }))
+  sources.push(...iframes)
+
   const localBase = await detectLocalApi()
-  if (localBase) {
-    sources.push({
-      name: 'Flux direct (local)',
-      kind: 'hls',
-      hlsUrl: `${localBase}/api/streams/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
-    })
-  } else {
-    sources.push({
-      name: 'Flux direct (local)',
-      kind: 'hls',
-      hlsUrl: `${LOCAL_API}/api/streams/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
-    })
-  }
+  sources.push({
+    name: 'Flux direct (local)',
+    kind: 'hls',
+    hlsUrl: `${localBase ?? LOCAL_API}/api/streams/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
+  })
 
   const cloudflareParams = `tmdb=${id}&type=${type}${type === 'tv' ? `&s=${season || 1}&e=${episode || 1}` : ''}`
   sources.push({
