@@ -86,7 +86,7 @@ export function VideoPlayer({ hlsUrl, tmdbId, mediaType, title }: VideoPlayerPro
 
     const playStream = (streamUrl: string) => {
       if (cancelled) return
-      const isM3u8 = streamUrl.includes('.m3u8') || streamUrl.includes('/playlist/')
+      const isM3u8 = streamUrl.includes('.m3u8') || streamUrl.includes('/playlist/') || streamUrl.includes('/m3u8-proxy')
       if (isM3u8 && Hls.isSupported()) {
         const hls = new Hls({ enableWebVTT: true, renderTextTracksNatively: true })
         hlsRef.current = hls
