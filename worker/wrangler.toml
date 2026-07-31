@@ -1,0 +1,6 @@
+name = "flux-stream-api"
+main = "index.ts"
+compatibility_date = "2025-04-01"
+
+[env.production]
+vars = { VIDSRC_API = "production" }
