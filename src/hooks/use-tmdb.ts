@@ -208,31 +208,29 @@ export type StreamSource = {
   hlsUrl: string
 }
 
-export const IFRAME_SOURCES = [
-  { name: 'Serveur #1 (VidSrc.me)', movie: (i: number) => `https://vidsrc.me/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.me/embed/tv/${i}/${s}/${e}` },
-  { name: 'Serveur #2 (VidSrc.ru)', movie: (i: number) => `https://vidsrc-embed.ru/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc-embed.ru/embed/tv/${i}/${s}/${e}` },
-  { name: 'Serveur #3 (VidSrc.su)', movie: (i: number) => `https://vidsrc.su/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.su/embed/tv/${i}/${s}/${e}` },
-]
-
 export const CLOUDFLARE_WORKER = 'https://flux-stream-api.surgeodev.workers.dev'
+export const LOCAL_API = 'http://localhost:8787'
 
-export function getIframeSources(id: number, type: string, season?: number, episode?: number): StreamSource[] {
-  const directUrl = `/api/download/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`
-  const direct: StreamSource = {
-    name: 'Flux direct (m3u8)',
-    kind: 'hls',
-    hlsUrl: directUrl,
+export async function getIframeSources(id: number, type: string, season?: number, episode?: number): Promise<StreamSource[]> {
+  const sources: StreamSource[] = []
+
+  const localOk = await fetch(`${LOCAL_API}/api/health`, { signal: AbortSignal.timeout(2000) })
+    .then(r => r.ok)
+    .catch(() => false)
+  if (localOk) {
+    sources.push({
+      name: 'Flux direct (local)',
+      kind: 'hls',
+      hlsUrl: `${LOCAL_API}/api/streams/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
+    })
   }
+
   const cloudflareParams = `tmdb=${id}&type=${type}${type === 'tv' ? `&s=${season || 1}&e=${episode || 1}` : ''}`
-  const cloudflare: StreamSource = {
+  sources.push({
     name: 'Cloudflare 24/7',
     kind: 'hls',
     hlsUrl: `${CLOUDFLARE_WORKER}?${cloudflareParams}`,
-  }
-  const iframes: StreamSource[] = IFRAME_SOURCES.map(s => ({
-    name: s.name,
-    kind: 'iframe' as const,
-    iframeUrl: type === 'tv' ? s.tv(id, season || 1, episode || 1) : s.movie(id),
-  }))
-  return [direct, cloudflare, ...iframes]
+  })
+
+  return sources
 }

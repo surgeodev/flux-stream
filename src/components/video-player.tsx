@@ -137,11 +137,15 @@ export function VideoPlayer({ hlsUrl, tmdbId, mediaType, title }: VideoPlayerPro
     }
 
     const isCloudflareApi = hlsUrl.startsWith('https://flux-stream-api.surgeodev.workers.dev')
-    if (isCloudflareApi) {
+    const isLocalApi = hlsUrl.includes('/api/streams/')
+    if (isCloudflareApi || isLocalApi) {
       fetch(hlsUrl)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json()
+        })
         .then((data: any) => {
-          const stream = data?.sources?.[0]?.stream
+          const stream = data?.sources?.[0]?.stream ?? data?.streams?.[0]?.url
           if (stream) playStream(stream)
         })
         .catch(() => {})

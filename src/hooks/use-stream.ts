@@ -24,7 +24,7 @@ export function useStream() {
     setActiveIdx(0)
 
     try {
-      const all = getIframeSources(Number(id), type, season, episode)
+      const all = await getIframeSources(Number(id), type, season, episode)
       if (all.length === 0) {
         setError('Aucun flux trouvé')
         return
