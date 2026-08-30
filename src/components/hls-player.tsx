@@ -29,14 +29,45 @@ export default function HLSPlayer({ src, poster, className, onError, onPlaying }
     timerRef.current = timeout
 
     if (Hls.isSupported()) {
-      const hls = new Hls()
+      const hls = new Hls({
+        // Buffering généreux + auto-récupération réseau
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        maxBufferSize: 60 * 1000 * 1000,
+        backBufferLength: 30,
+        maxBufferHole: 0.5,
+        maxStarvationDelay: 8,
+        appendErrorMaxRetry: 10,
+        nudgeMaxRetry: 10,
+        fragLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 500,
+        fragLoadingTimeOut: 10000,
+        levelLoadingMaxRetry: 6,
+        levelLoadingRetryDelay: 500,
+        levelLoadingTimeOut: 10000,
+        manifestLoadingMaxRetry: 4,
+        manifestLoadingRetryDelay: 500,
+        manifestLoadingTimeOut: 15000,
+        abrEwmaDefaultEstimate: 800000,
+        abrBandWidthFactor: 0.9,
+        abrBandWidthUpFactor: 0.7,
+        autoStartLoad: true,
+        enableWorker: true,
+      })
       hlsRef.current = hls
       hls.loadSource(src)
       hls.attachMedia(video)
+      let fatalRetries = 0
       hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          setError('Erreur de chargement du flux')
+        if (!data.fatal) return
+        fatalRetries += 1
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && fatalRetries <= 5) {
+          try { hls.startLoad(); return } catch { /* fallthrough */ }
         }
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && fatalRetries <= 4) {
+          try { hls.recoverMediaError(); return } catch { /* fallthrough */ }
+        }
+        setError('Erreur de chargement du flux')
       })
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src

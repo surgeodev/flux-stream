@@ -43,6 +43,7 @@ export type MediaItem = {
   rating?: number
   type: 'movie' | 'tv'
   seasons?: number
+  runtime?: number
 }
 
 function tmdbItemToMedia(item: any, type: 'movie' | 'tv'): MediaItem {
@@ -57,6 +58,7 @@ function tmdbItemToMedia(item: any, type: 'movie' | 'tv'): MediaItem {
     rating: item.vote_average || 0,
     type,
     seasons: type === 'tv' ? item.number_of_seasons || item.seasons || 0 : undefined,
+    runtime: type === 'movie' ? item.runtime || 0 : undefined,
   }
 }
 
@@ -67,7 +69,7 @@ async function tmdbFetch(path: string): Promise<any> {
   const key = path
   const cached = CACHE.get(key)
   if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data
-  const url = `${TMDB_API}${path}${path.includes('?') ? '&' : '?'}api_key=${TMDB_KEY}&language=fr-FR`
+  const url = `/api/tmdb-proxy?path=${encodeURIComponent(path)}`
   const resp = await fetch(url)
   if (!resp.ok) throw new Error(`TMDB ${resp.status}`)
   const data = await resp.json()
@@ -107,10 +109,33 @@ export async function getTrending(): Promise<MediaItem[]> {
   }
 }
 
+export async function getVideos(id: number, type: 'movie' | 'tv'): Promise<{ key: string; name: string; kind: string }[]> {
+  try {
+    const data = await tmdbFetch(`/${type === 'movie' ? 'movie' : 'tv'}/${id}/videos`)
+    return (data.results || [])
+      .filter((v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'))
+      .map((v: any) => ({ key: v.key, name: v.name, kind: v.type }))
+  } catch {
+    return []
+  }
+}
+
 export async function getRecentMovies(): Promise<MediaItem[]> {
   try {
-    const data = await tmdbFetch('/movie/now_playing')
-    return safeResults(data).slice(0, 12).map((m: any) => tmdbItemToMedia(m, 'movie'))
+    const [data, extra] = await Promise.all([
+      tmdbFetch('/movie/now_playing'),
+      tmdbFetch('/movie/upcoming'),
+    ])
+    const seen = new Set<number>()
+    const items = [...safeResults(data), ...safeResults(extra)]
+      .filter(r => {
+        if (seen.has(r.id)) return false
+        seen.add(r.id)
+        return true
+      })
+      .slice(0, 14)
+      .map((m: any) => tmdbItemToMedia(m, 'movie'))
+    return items.sort(() => Math.random() - 0.5)
   } catch {
     return POPULAR_MOVIES
   }
@@ -122,11 +147,117 @@ export async function getCatalog(): Promise<MediaItem[]> {
       tmdbFetch('/movie/popular'),
       tmdbFetch('/tv/popular'),
     ])
-    const m = safeResults(movies).slice(0, 10).map((r: any) => tmdbItemToMedia(r, 'movie'))
-    const t = safeResults(tv).slice(0, 10).map((r: any) => tmdbItemToMedia(r, 'tv'))
-    return [...m, ...t]
+    const m = safeResults(movies).slice(0, 14).map((r: any) => tmdbItemToMedia(r, 'movie'))
+    const t = safeResults(tv).slice(0, 14).map((r: any) => tmdbItemToMedia(r, 'tv'))
+    return [...m, ...t].sort(() => Math.random() - 0.5)
   } catch {
     return [...POPULAR_MOVIES, ...POPULAR_TV]
+  }
+}
+
+export type GenreDef = { id: number; name: string }
+
+export type CategoryDef = {
+  label: string
+  movies: GenreDef
+  tv?: GenreDef
+  sort?: string
+  hue: number
+  tagline: string
+}
+
+export const HOME_GENRES: CategoryDef[] = [
+  { label: 'Action', movies: { id: 28, name: 'Action' }, tv: { id: 10759, name: 'Action & Adventure' }, sort: 'popularity.desc', hue: 20, tagline: 'Adrénaline et cascades' },
+  { label: 'Science-fiction', movies: { id: 878, name: 'Science-Fiction' }, tv: { id: 10765, name: 'Sci-Fi & Fantastique' }, sort: 'vote_count.desc', hue: 200, tagline: 'Futurs et mondes lointains' },
+  { label: 'Comédie', movies: { id: 35, name: 'Comédie' }, tv: { id: 35, name: 'Comédie' }, sort: 'release_date.desc', hue: 48, tagline: 'Rire garanti' },
+  { label: 'Drame', movies: { id: 18, name: 'Drame' }, tv: { id: 18, name: 'Drame' }, sort: 'vote_average.desc', hue: 262, tagline: 'Émotions intenses' },
+  { label: 'Horreur', movies: { id: 27, name: 'Horreur' }, sort: 'popularity.desc', hue: 0, tagline: 'Frayeurs assurées' },
+  { label: 'Animation', movies: { id: 16, name: 'Animation' }, tv: { id: 16, name: 'Animation' }, sort: 'vote_count.desc', hue: 320, tagline: 'Tout public' },
+  { label: 'Thriller', movies: { id: 53, name: 'Thriller' }, tv: { id: 80, name: 'Crime' }, sort: 'release_date.desc', hue: 175, tagline: 'Suspense et tension' },
+  { label: 'Romance', movies: { id: 10749, name: 'Romance' }, tv: { id: 10749, name: 'Romance' }, sort: 'vote_average.desc', hue: 348, tagline: 'Histoires d\'amour' },
+  { label: 'Aventure', movies: { id: 12, name: 'Aventure' }, tv: { id: 10759, name: 'Action & Adventure' }, sort: 'popularity.desc', hue: 145, tagline: 'Évasions épiques' },
+  { label: 'Fantastique', movies: { id: 14, name: 'Fantastique' }, tv: { id: 10765, name: 'Sci-Fi & Fantastique' }, sort: 'vote_count.desc', hue: 285, tagline: 'Magie et créatures' },
+  { label: 'Mystère', movies: { id: 9648, name: 'Mystère' }, tv: { id: 80, name: 'Crime' }, sort: 'popularity.desc', hue: 32, tagline: 'Énigmes à résoudre' },
+  { label: 'Documentaire', movies: { id: 99, name: 'Documentaire' }, tv: { id: 99, name: 'Documentaire' }, sort: 'vote_average.desc', hue: 60, tagline: 'Le réel raconté' },
+]
+
+export const CATEGORIES: CategoryDef[] = [
+  ...HOME_GENRES,
+  { label: 'Guerre', movies: { id: 10752, name: 'Guerre' }, sort: 'vote_average.desc', hue: 350, tagline: 'Conflits et bravoure' },
+  { label: 'Western', movies: { id: 37, name: 'Western' }, sort: 'popularity.desc', hue: 25, tagline: 'Conquête de l\'Ouest' },
+  { label: 'Musique', movies: { id: 10402, name: 'Musique' }, tv: { id: 10402, name: 'Musique' }, sort: 'popularity.desc', hue: 300, tagline: 'Bandes-son et concerts' },
+  { label: 'Crime', movies: { id: 80, name: 'Crime' }, tv: { id: 80, name: 'Crime' }, sort: 'vote_count.desc', hue: 210, tagline: 'Enquêtes et affaires' },
+  { label: 'Famille', movies: { id: 10751, name: 'Famille' }, tv: { id: 10751, name: 'Famille' }, sort: 'vote_average.desc', hue: 140, tagline: 'À partager' },
+  { label: 'Histoire', movies: { id: 36, name: 'Histoire' }, sort: 'popularity.desc', hue: 45, tagline: 'Passés reconstitués' },
+]
+
+export async function getByGenre(type: 'movie' | 'tv', genreId: number, sort?: string, page = 1): Promise<MediaItem[]> {
+  try {
+    const s = sort || 'popularity.desc'
+    const data = await tmdbFetch(`/discover/${type}?with_genres=${genreId}&sort_by=${s}&vote_count.gte=200&page=${page}`)
+    const items = safeResults(data).slice(0, 16).map((r: any) => tmdbItemToMedia(r, type))
+    if (items.length < 8 && page === 1) {
+      const alt = await tmdbFetch(`/discover/${type}?with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=100&page=2`)
+      items.push(...safeResults(alt).slice(0, 8).map((r: any) => tmdbItemToMedia(r, type)))
+    }
+    return items
+  } catch {
+    return []
+  }
+}
+
+export async function getGenreSection(label: string, movies: GenreDef, tv: GenreDef | undefined, sort?: string): Promise<MediaItem[]> {
+  try {
+    const [m, t] = await Promise.all([
+      getByGenre('movie', movies.id, sort),
+      tv ? getByGenre('tv', tv.id, sort).then(list => list.map(i => ({ ...i }))) : Promise.resolve([]),
+    ])
+    const seen = new Set<string>()
+    const merged: MediaItem[] = []
+    for (const item of [...m, ...t]) {
+      const k = `${item.type}-${item.id}`
+      if (seen.has(k)) continue
+      seen.add(k)
+      merged.push(item)
+      if (merged.length >= 18) break
+    }
+    return merged.sort(() => Math.random() - 0.5)
+  } catch {
+    return []
+  }
+}
+
+export async function getCategoryGrid(cat: CategoryDef, page = 1): Promise<MediaItem[]> {
+  try {
+    const [m, t] = await Promise.all([
+      getByGenre('movie', cat.movies.id, cat.sort, page),
+      cat.tv ? getByGenre('tv', cat.tv.id, cat.sort, page).then(list => list.map(i => ({ ...i }))) : Promise.resolve([]),
+    ])
+    const seen = new Set<string>()
+    const merged: MediaItem[] = []
+    for (const item of [...m, ...t]) {
+      const k = `${item.type}-${item.id}`
+      if (seen.has(k)) continue
+      seen.add(k)
+      merged.push(item)
+    }
+    return merged
+  } catch {
+    return []
+  }
+}
+
+export async function getTopRated(): Promise<MediaItem[]> {
+  try {
+    const [movies, tv] = await Promise.all([
+      tmdbFetch('/movie/top_rated'),
+      tmdbFetch('/tv/top_rated'),
+    ])
+    const m = safeResults(movies).slice(0, 5).map((r: any) => tmdbItemToMedia(r, 'movie'))
+    const t = safeResults(tv).slice(0, 5).map((r: any) => tmdbItemToMedia(r, 'tv'))
+    return [...m, ...t].sort((a, b) => (b.rating || 0) - (a.rating || 0))
+  } catch {
+    return [...POPULAR_MOVIES, ...POPULAR_TV].sort((a, b) => (b.rating || 0) - (a.rating || 0))
   }
 }
 
@@ -134,29 +265,96 @@ export async function getMovie(id: number): Promise<MediaItem | undefined> {
   try {
     const data = await tmdbFetch(`/movie/${id}`)
     return tmdbItemToMedia(data, 'movie')
-  } catch {
-    return POPULAR_MOVIES.find(m => m.id === id)
+  } catch (e: any) {
+    if (e?.message === 'TMDB 404') return undefined
+    const hardcoded = POPULAR_MOVIES.find(m => m.id === id)
+    if (hardcoded) return hardcoded
+    throw e
   }
+}
+
+export async function getSimilar(id: number, type: 'movie' | 'tv'): Promise<MediaItem[]> {
+  try {
+    const data = await tmdbFetch(`/${type}/${id}/similar`)
+    return safeResults(data).slice(0, 10).map((r: any) => tmdbItemToMedia(r, type))
+  } catch {
+    return []
+  }
+}
+
+export async function getFranchiseSuggestions(id: number, type: 'movie' | 'tv', title: string): Promise<MediaItem[]> {
+  const seen = new Set<string>([`${type}-${id}`])
+  const out: MediaItem[] = []
+  const push = (items: MediaItem[]) => {
+    for (const it of items) {
+      const k = `${it.type}-${it.id}`
+      if (seen.has(k)) continue
+      seen.add(k)
+      out.push(it)
+    }
+  }
+
+  const similar = await getSimilar(id, type)
+  push(similar)
+
+  const name = (title || '').toLowerCase().trim()
+  if (name.length >= 2) {
+    try {
+      const data = await tmdbFetch(`/search/multi?query=${encodeURIComponent(name)}&include_adult=false`)
+      const hits = safeResults(data)
+        .filter((r: any) => r.media_type === type || (r.media_type === 'movie' && type === 'movie'))
+        .slice(0, 10)
+        .map((r: any) => tmdbItemToMedia(r, r.media_type || type))
+      push(hits)
+    } catch { /* ignore */ }
+  }
+
+  return out.slice(0, 10)
 }
 
 export async function getTVShow(id: number): Promise<MediaItem | undefined> {
   try {
     const data = await tmdbFetch(`/tv/${id}`)
     return tmdbItemToMedia(data, 'tv')
+  } catch (e: any) {
+    if (e?.message === 'TMDB 404') return undefined
+    const hardcoded = POPULAR_TV.find(t => t.id === id)
+    if (hardcoded) return hardcoded
+    throw e
+  }
+}
+
+export async function getSeasonEpisodes(id: number, season: number): Promise<{ episodeNumber: number; name: string; overview: string; still: string }[]> {
+  try {
+    const data = await tmdbFetch(`/tv/${id}/season/${season}`)
+    return (data.episodes || [])
+      .map((e: any) => ({
+        episodeNumber: e.episode_number,
+        name: e.name || `Épisode ${e.episode_number}`,
+        overview: e.overview || '',
+        still: e.still_path || '',
+      }))
+      .filter((e: any) => e.episodeNumber > 0)
   } catch {
-    return POPULAR_TV.find(t => t.id === id)
+    return []
   }
 }
 
 export async function searchMedia(query: string): Promise<MediaItem[]> {
   try {
-    const [movies, tv] = await Promise.all([
-      tmdbFetch(`/search/movie?query=${encodeURIComponent(query)}`),
-      tmdbFetch(`/search/tv?query=${encodeURIComponent(query)}`),
-    ])
-    const m = safeResults(movies).slice(0, 6).map((r: any) => tmdbItemToMedia(r, 'movie'))
-    const t = safeResults(tv).slice(0, 6).map((r: any) => tmdbItemToMedia(r, 'tv'))
-    const results = [...m, ...t]
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+    const data = await res.json()
+    const results = (data.results || []).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      year: r.year ? Number(r.year) : 0,
+      img: r.poster ? imgPath(r.poster) : '',
+      backdrop: '',
+      overview: '',
+      genres: [],
+      rating: r.rating || 0,
+      type: r.type || 'movie',
+    }))
     if (results.length > 0) return results
   } catch {}
 
@@ -206,19 +404,31 @@ export type StreamSource = {
   name: string
   kind: 'hls'
   hlsUrl: string
+  detail?: string
 }
 
-export const CLOUDFLARE_WORKER = 'https://flux-stream-api.surgeodev.workers.dev'
 export const LOCAL_API = 'http://localhost:8787'
 export const LOCAL_API_ALT = 'http://127.0.0.1:8787'
 
+export function rewriteLocalUrl(u: string): string {
+  if (!u) return u
+  const host = typeof location !== 'undefined' ? location.hostname : 'localhost'
+  return u
+    .replace('http://localhost:8787', `http://${host}:8787`)
+    .replace('http://127.0.0.1:8787', `http://${host}:8787`)
+}
+
 export const IFRAME_SOURCES = [
-  { name: 'VidSrc #1', movie: (i: number) => `https://vidsrcme.ru/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrcme.ru/embed/tv/${i}/${s}/${e}` },
-  { name: 'VidSrc #2', movie: (i: number) => `https://vsembed.ru/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vsembed.ru/embed/tv/${i}/${s}/${e}` },
-  { name: 'VidSrc #3', movie: (i: number) => `https://vidsrc.su/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.su/embed/tv/${i}/${s}/${e}` },
+  { name: 'Vidéo HD', movie: (i: number) => `https://vidsrc.to/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.to/embed/tv/${i}/${s}/${e}` },
+  { name: 'CinéMax', movie: (i: number) => `https://vidsrc.su/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.su/embed/tv/${i}/${s}/${e}` },
+  { name: 'Stream Prime', movie: (i: number) => `https://vidsrc.pm/embed/movie/${i}`, tv: (i: number, s: number, e: number) => `https://vidsrc.pm/embed/tv/${i}/${s}/${e}` },
 ]
 
 async function detectLocalApi(): Promise<string | null> {
+  const sameHost = await fetch('/api/health', { signal: AbortSignal.timeout(2000) })
+    .then(r => r.ok)
+    .catch(() => false)
+  if (sameHost) return ''
   for (const base of [LOCAL_API, LOCAL_API_ALT]) {
     const ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(1500) })
       .then(r => r.ok)
@@ -231,26 +441,33 @@ async function detectLocalApi(): Promise<string | null> {
 export async function getIframeSources(id: number, type: string, season?: number, episode?: number): Promise<StreamSource[]> {
   const sources: StreamSource[] = []
 
-  const iframes: StreamSource[] = IFRAME_SOURCES.map(s => ({
-    name: s.name,
-    kind: 'iframe' as const,
-    iframeUrl: type === 'tv' ? s.tv(id, season || 1, episode || 1) : s.movie(id),
-  }))
-  sources.push(...iframes)
-
+  // 1) Flux (HLS direct) en premier
   const localBase = await detectLocalApi()
   sources.push({
-    name: 'Flux direct (local)',
+    name: 'Flux',
     kind: 'hls',
-    hlsUrl: `${localBase ?? LOCAL_API}/api/streams/${type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
+    hlsUrl: `${localBase ?? LOCAL_API}/api/streams/${type === 'tv' ? 'series' : type}/${id}${type === 'tv' ? `?season=${season || 1}&episode=${episode || 1}` : ''}`,
   })
 
-  const cloudflareParams = `tmdb=${id}&type=${type}${type === 'tv' ? `&s=${season || 1}&e=${episode || 1}` : ''}`
-  sources.push({
-    name: 'Cloudflare 24/7',
-    kind: 'hls',
-    hlsUrl: `${CLOUDFLARE_WORKER}?${cloudflareParams}`,
-  })
+  // 2) Sources externes en secours
+  for (const s of IFRAME_SOURCES) {
+    sources.push({
+      name: s.name,
+      kind: 'iframe' as const,
+      iframeUrl: type === 'tv' ? s.tv(id, season || 1, episode || 1) : s.movie(id),
+    })
+  }
+
+  // 3) Wiflix VF (films + séries) — via notre proxy, apparaît comme choix normal
+  try {
+    const wiflixRes = await fetch(`/api/wiflix/resolve?tmdb_id=${id}&type=${type}&season=${season || 1}&episode=${episode || 1}`, { signal: AbortSignal.timeout(8000) })
+    if (wiflixRes.ok) {
+      const wj = await wiflixRes.json()
+      if (wj.url) {
+        sources.push({ name: 'Wiflix VF', kind: 'iframe' as const, iframeUrl: wj.url })
+      }
+    }
+  } catch {}
 
   return sources
 }

@@ -14,9 +14,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         {children}
       </motion.main>
-      <footer className="border-t border-white/5 py-8 mt-12 bg-black/50">
-        <div className="container mx-auto px-6 text-center text-muted-foreground text-sm">
-          <p className="font-display font-medium text-white/50 mb-2 tracking-widest text-xs">FLUX</p>
+      <footer className="border-t border-white/5 py-10 mt-12">
+        <div className="container mx-auto px-6 text-center text-muted-foreground text-xs">
+          <p className="font-display font-medium text-white/40 mb-3 tracking-[0.4em] text-[11px]">FLUX</p>
           <p>&copy; {new Date().getFullYear()} — Streaming sans pub</p>
         </div>
       </footer>
