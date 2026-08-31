@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLUX TV — Recherche</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+
+<header>
+  <h1><img src="logo.png" alt="FLUX"></h1>
+  <nav id="topnav">
+    <button id="navHome" onclick="location.href='lite.html'">Accueil</button>
+    <button id="navMovie" onclick="location.href='litemovie.html'">Films</button>
+    <button id="navTv" onclick="location.href='litetv.html'">S&eacute;ries</button>
+    <button id="navSearch" class="sel">Recherche</button>
+    <button id="navFs" onclick="toggleFullscreen()"><button id="navSearch" class="sel">Recherche</button>#9632; Plein écran</button>
+  </nav>
+</header>
+
+<main>
+  <h2 id="title">Recherche</h2>
+  <div id="searchrow">
+    <form onsubmit="doSearch(); return false;">
+      <input id="q" type="text" value="" autocomplete="off">
+      <button id="sbtn" type="submit">Chercher</button>
+    </form>
+  </div>
+  <div id="grid"></div>
+  <div id="msg">Tapez un titre puis Chercher</div>
+</main>
+
+<div id="hint">OK = rechercher &middot; fl&egrave;ches = naviguer &middot; Retour = accueil</div>
+<div id="dbg">KC:-</div>
+
+<script>
+var LITE_PAGE = 'search';
+</script>
+<script src="lrud.js"></script>
+<script src="lite-common.js"></script>
+<script>
+initLite();
+(function() {
+  var q = document.getElementById('q');
+  if (q) { try { q.focus(); } catch (e) {} }
+})();
+</script>
+</body>
+</html>

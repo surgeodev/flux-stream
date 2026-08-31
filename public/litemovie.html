@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLUX TV — Films</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+
+<header>
+  <h1><img src="logo.png" alt="FLUX"></h1>
+  <nav id="topnav">
+    <button id="navHome" onclick="location.href='lite.html'">Accueil</button>
+    <button id="navMovie" class="sel">Films</button>
+    <button id="navTv" onclick="location.href='litetv.html'">S&eacute;ries</button>
+    <button id="navSearch" onclick="location.href='litesearch.html'">Recherche</button>
+    <button id="navFs" onclick="toggleFullscreen()" aria-label="Plein écran">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg>
+    </button>
+  </nav>
+</header>
+
+<main>
+  <div class="row-section">
+    <div class="row-title" id="title">Films</div>
+    <div class="row-scroll" id="grid"></div>
+  </div>
+  <div id="msg">Chargement...</div>
+</main>
+
+<div id="hint">OK / Entr&eacute;e = ouvrir &middot; fl&egrave;ches = naviguer &middot; Retour = accueil</div>
+<div id="dbg">KC:-</div>
+
+<script>
+var LITE_PAGE = 'movie';
+</script>
+<script src="lrud.js"></script>
+<script src="lite-common.js"></script>
+<script>
+initLite();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tv="http://www.samsung.com/ns/widgets" id="http://flux.local/flux-app" version="1.0.0" width="960" height="540">
+  <name>FLUX</name>
+  <description>FLUX TV - Movies and Series</description>
+  <content src="index.html"/>
+  <icon src="icon.png"/>
+  <thumbnail src="thumbnail.png"/>
+  <author>FLUX Team</author>
+  <license>Proprietary</license>
+  <tv:application category="web"/>
+</widget>

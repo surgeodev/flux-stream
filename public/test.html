@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLUX - Diagnostic sources v5</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; color: #fff; font-family: Arial, Helvetica, sans-serif; font-size: 17px; padding: 20px; }
+  h1 { color: #e2202d; font-size: 26px; margin-bottom: 14px; }
+  h2 { color: #e2202d; font-size: 20px; margin: 28px 0 10px; }
+  .controls { background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+  .controls label { color: #999; font-size: 14px; display: block; margin-bottom: 8px; }
+  input[type=text] { background: #1f1f1f; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px 14px; font-size: 17px; width: 60%; max-width: 620px; margin-bottom: 10px; }
+  input[type=checkbox] { width: 20px; height: 20px; vertical-align: middle; margin-right: 6px; }
+  button { background: #222; color: #fff; border: 2px solid #444; border-radius: 8px; padding: 11px 22px; font-size: 17px; margin: 6px 8px 6px 0; cursor: pointer; }
+  button:focus, button:hover { border-color: #e2202d; }
+  button.primary { background: #e2202d; border-color: #e2202d; }
+  .opt { display: inline-block; color: #bbb; font-size: 15px; margin-right: 18px; }
+  .mhead { background: #161616; border: 1px solid #2a2a2a; border-left: 4px solid #e2202d; border-radius: 8px; padding: 12px 16px; margin: 18px 0 8px; font-size: 18px; font-weight: bold; }
+  .mhead .api { color: #777; font-size: 13px; font-weight: normal; display: block; margin-top: 3px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  th { text-align: left; color: #888; font-size: 13px; padding: 6px 10px; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 8px 10px; border-bottom: 1px solid #1c1c1c; vertical-align: top; font-size: 15px; }
+  td.prov { width: 24%; color: #ffd57a; }
+  td.verdict { width: 30%; font-weight: bold; }
+  td.detail { color: #bbb; font-size: 13px; word-break: break-all; }
+  .verdict.ok { color: #4caf50; }
+  .verdict.warn { color: #ffc107; }
+  .verdict.bad { color: #f44336; }
+  .verdict.run { color: #2196f3; }
+  .ln { margin: 1px 0; }
+  .ln.ok { color: #4caf50; }
+  .ln.bad { color: #f44336; }
+  .ln.warn { color: #ffc107; }
+  .sum { background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px 18px; margin-top: 18px; font-size: 16px; }
+  video { width: 100%; max-width: 720px; background: #000; display: block; }
+  .note { color: #888; font-size: 14px; margin-bottom: 6px; }
+  .st { color: #9f9; font-size: 15px; margin-top: 6px; min-height: 20px; }
+  .st.err { color: #f66; }
+</style>
+</head>
+<body>
+
+<h1>FLUX &mdash; Diagnostic sources</h1>
+
+<div class="controls">
+  <label>Films/s&eacute;ries &agrave; tester (IDs TMDB s&eacute;par&eacute;s par virgule &middot; s&eacute;rie au format id|saison|&eacute;pisode)</label>
+  <input type="text" id="ids" value="550,603,27205,155,157336,299534">
+  <br>
+  <span class="opt">Max variantes par film: <input type="text" id="maxv" value="50" style="width:70px;display:inline;margin:0"></span>
+  <span class="opt"><input type="checkbox" id="docVideo"> Tester la lecture vid&eacute;o (d&eacute;sactiv&eacute; = rapide)</span>
+  <br>
+  <button class="primary" onclick="runAll()">Tester tout</button>
+  <button onclick="stopRun()">Stop</button>
+  <button onclick="clearOut()">Effacer</button>
+</div>
+
+<div id="out"></div>
+<div id="sum" style="display:none"></div>
+
+<video id="vt" style="display:none" muted></video>
+
+<hr>
+<h2>Tests basiques du d&eacute;codeur vid&eacute;o</h2>
+<p class="note">MP4 compatible local, HLS local, HLS Apple.</p>
+<div style="margin:12px 0">
+  <video id="v1" controls style="margin-bottom:8px"></video>
+  <button onclick="play('v1','s1','/compat.mp4')">1. MP4 compatible</button>
+  <div id="s1" class="st"></div>
+</div>
+<div style="margin:12px 0">
+  <video id="v2" controls style="margin-bottom:8px"></video>
+  <button onclick="play('v2','s2','/hls/test.m3u8')">2. HLS local</button>
+  <div id="s2" class="st"></div>
+</div>
+<div style="margin:12px 0">
+  <video id="v3" controls style="margin-bottom:8px"></video>
+  <button onclick="play('v3','s3','/test.m3u8')">3. HLS Apple</button>
+  <div id="s3" class="st"></div>
+</div>
+<div style="margin:12px 0">
+  <video id="v4" controls style="margin-bottom:8px"></video>
+  <button onclick="play('v4','s4','/seg0.mp4')">4. seg0 mux (Vixsrc 720p+AAC)</button>
+  <button onclick="play('v4','s4','/seg0_reenc.mp4')">5. seg0 reencod&eacute; h264</button>
+  <button onclick="play('v4','s4','/seg0_fs.mp4')">6. seg0 mux faststart</button>
+  <button onclick="play('v4','s4','/seg0_fs_main.mp4')">7. seg0 reenc main faststart</button>
+  <button onclick="play('v4','s4','/vix_12seg.mp4')">8. Vixsrc 12 segm. mux&eacute;s (1min40)</button>
+  <button onclick="play('v5','s5','http://'+location.hostname+':8787/test-hls')">9. test-hls via ts-proxy</button>
+  <button onclick="play('v5','s5','http://'+location.hostname+':8787/test-hls?mode=direct')">10. test-hls direct Range</button>
+  <button onclick="play('v5','s5','http://'+location.hostname+':8787/vixsplit?tmdb=634649')">11. Vixsrc S&Eacute;PAR&Eacute; video+audio (Spiderman)</button>
+  <button onclick="play('v5','s5','http://'+location.hostname+':8787/test-seg?mode=orig')">12. 6 segm video seule ORIG (fa&ccedil;on NoTorrent)</button>
+  <button onclick="play('v5','s5','http://'+location.hostname+':8787/test-seg?mode=remux')">13. 6 segm video seule REMUX ffmpeg</button>
+  <button onclick="play('v5','s5','http://'+location.hostname+':8787/test-seg?mode=nt')">14. CONTROLE: 3 segm NoTorrent reels (devrait jouer)</button>
+  <div id="s4" class="st"></div>
+</div>
+<div style="margin:12px 0">
+  <video id="v5" controls style="margin-bottom:8px"></video>
+  <div id="s5" class="st"></div>
+</div>
+
+<script>
+var STOP = false;
+var videoTimer = null;
+var nOk = 0, nWarn = 0, nBad = 0, nTotal = 0;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s || ''); }
+function trunc(s, n) { s = String(s || ''); n = n || 80; return s.length > n ? s.slice(0, n) + '...' : s; }
+function countLines(text, needle) {
+  var n = 0, lines = String(text || '').split('\n');
+  for (var i = 0; i < lines.length; i++) if (lines[i].indexOf(needle) >= 0) n++;
+  return n;
+}
+function firstSegUrl(text) {
+  var lines = String(text || '').split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var s = lines[i].trim();
+    if (s && s.charAt(0) !== '#' && s.indexOf('http') === 0) return s;
+  }
+  return '';
+}
+function parseErr(text) {
+  if (!text) return '';
+  try { var d = JSON.parse(text); return d && d.error ? String(d.error) : ''; }
+  catch (e) { return ''; }
+}
+function line(row, msg, cls) {
+  var d = document.createElement('div');
+  d.className = 'ln' + (cls ? ' ' + cls : '');
+  d.textContent = msg;
+  row.detail.appendChild(d);
+}
+function setVerdict(row, state, msg) {
+  if (row.state === 'bad' && state !== 'bad') return;
+  row.status.textContent = msg;
+  row.status.className = 'verdict ' + state;
+  if (row.state === state) return;
+  if (state === 'ok') nOk++;
+  else if (state === 'warn') nWarn++;
+  else if (state === 'bad') nBad++;
+  row.state = state;
+}
+function okV(row, msg) { setVerdict(row, 'ok', msg); }
+function warnV(row, msg) { setVerdict(row, 'warn', msg); }
+function badV(row, msg) { setVerdict(row, 'bad', msg); }
+
+function fixUrl(u) {
+  var host = location.hostname;
+  u = u.replace(/http:\/\/localhost:8787/g, 'http://' + host + ':8787');
+  u = u.replace(/http:\/\/127\.0\.0\.1:8787/g, 'http://' + host + ':8787');
+  if (u.indexOf('m3u8-proxy') >= 0 && u.indexOf('flat=') < 0) u += '&flat=1';
+  var m = u.match(/[?&]url=([^&]+)/);
+  if (m) {
+    var decoded = decodeURIComponent(m[1]);
+    if ((u.indexOf('file-proxy') >= 0 || u.indexOf('ts-proxy') >= 0) && decoded.indexOf('p.111477.xyz') >= 0) {
+      return decoded;
+    }
+  }
+  if (u.indexOf('/api/') === 0) return u;
+  if (u.indexOf(':8787') >= 0) return u;
+  var hp = u.match(/^https?:\/\/([^\/]+)/);
+  if (hp) {
+    var hn = hp[1].toLowerCase();
+    if (hn.indexOf('vixsrc.to') >= 0 || hn.indexOf('vix-content.net') >= 0) {
+      return '/api/dlproxy/?url=' + encodeURIComponent(u);
+    }
+  }
+  if (/^https?:/i.test(u)) return '/api/proxy?url=' + encodeURIComponent(u);
+  return u;
+}
+
+function scoreStream(s) {
+  var t = ((s.title || '') + ' ' + (s.provider || '') + ' ' + (s.name || ''));
+  var q = s.quality || '';
+  var u = s.url || '';
+  var sc = 0;
+  if (/notorrent/i.test(s.provider || '')) sc += 300;
+  if (/vixsrc/i.test(s.provider || '')) sc += 150;
+  if (/file-proxy/.test(u)) sc += 200;
+  if (/ts-proxy/.test(u)) sc += 80;
+  if (/m3u8-proxy/.test(u)) sc -= 10;
+  if (/mp4/i.test(t)) sc += 100;
+  if (/mkv|webm|avi|hevc|h265|10bit|hdr/i.test(t)) sc -= 60;
+  if (/2160|4k/i.test(q)) sc -= 50;
+  if (/8k/i.test(q)) sc -= 120;
+  if (q === '720p') sc += 30;
+  else if (q === '1080p') sc += 20;
+  else if (q === 'Auto') sc -= 40;
+  return sc;
+}
+
+function parseIds() {
+  var out = [];
+  var parts = $('ids').value.split(',');
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i].trim();
+    if (!p) continue;
+    var m = p.split('|');
+    out.push({ type: m.length >= 3 ? 'series' : 'movie', id: m[0], season: m[1] || 1, episode: m[2] || 1, label: p });
+  }
+  return out;
+}
+
+function mkRow(v, rank) {
+  var tr = document.createElement('tr');
+  var td1 = document.createElement('td'); td1.className = 'prov';
+  td1.textContent = (v.provider || v.name || '?') + ' [' + rank + ']' + (v.quality ? ' ' + v.quality : '');
+  var td2 = document.createElement('td'); td2.className = 'verdict'; td2.textContent = 'en attente';
+  var td3 = document.createElement('td'); td3.className = 'detail';
+  tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+  return { el: tr, status: td2, detail: td3, state: 'run' };
+}
+
+var runState = null;
+
+function runAll() {
+  STOP = false;
+  clearOut();
+  nOk = 0; nWarn = 0; nBad = 0; nTotal = 0;
+  runState = { tests: parseIds(), mi: 0, current: null, variants: null, vi: 0 };
+  if (!runState.tests.length) { lineB(null, 'Aucun ID &agrave; tester', 'bad'); return; }
+  nextMovie();
+}
+
+function stopRun() { STOP = true; clearTimeout(videoTimer); if ($('sum')) $('sum').style.display = 'none'; }
+
+function clearOut() { $('out').innerHTML = ''; $('sum').style.display = 'none'; }
+
+function nextMovie() {
+  if (STOP) return;
+  var st = runState;
+  if (st.mi >= st.tests.length) { finish(); return; }
+  st.current = st.tests[st.mi];
+  st.variants = null; st.vi = 0;
+  var box = movieBox(st.current);
+  loadStreams(st.current, box);
+}
+
+function movieBox(test) {
+  var box = document.createElement('div');
+  var h = document.createElement('div'); h.className = 'mhead';
+  h.appendChild(document.createTextNode(test.type === 'series'
+    ? 'S\u00e9rie ' + test.label
+    : 'Film TMDB ' + test.label));
+  var api = document.createElement('span'); api.className = 'api';
+  api.textContent = '/api/streams/' + (test.type === 'series' ? 'series' : 'movie') + '/' + test.id + (test.type === 'series' ? '?season=' + test.season + '&episode=' + test.episode : '');
+  h.appendChild(api);
+  var t = document.createElement('table');
+  var th = document.createElement('tr');
+  var th1 = document.createElement('th'); th1.textContent = 'Source';
+  var th2 = document.createElement('th'); th2.textContent = 'Verdict';
+  var th3 = document.createElement('th'); th3.textContent = 'D\u00e9tail (erreurs pr\u00e9cises)';
+  th.appendChild(th1); th.appendChild(th2); th.appendChild(th3);
+  var tb = document.createElement('tbody');
+  t.appendChild(th); t.appendChild(tb);
+  box.appendChild(h); box.appendChild(t);
+  $('out').appendChild(box);
+  return { h: h, tb: tb, log: function(msg, cls) {
+    var d = document.createElement('div');
+    d.className = 'ln' + (cls ? ' ' + cls : '');
+    d.textContent = msg;
+    this.h.appendChild(d);
+  }};
+}
+
+function lineB(box, msg, cls) {
+  if (!box) return;
+  var d = document.createElement('div');
+  d.className = 'ln' + (cls ? ' ' + cls : '');
+  d.textContent = msg;
+  box.h.appendChild(d);
+}
+
+function loadStreams(test, box) {
+  var url = '/api/streams/' + (test.type === 'series' ? 'series' : 'movie') + '/' + test.id;
+  if (test.type === 'series') url += '?season=' + test.season + '&episode=' + test.episode;
+  box.log('GET ' + url);
+  var x = new XMLHttpRequest();
+  x.open('GET', url, true);
+  x.timeout = 12000;
+  x.onreadystatechange = function() {
+    if (x.readyState !== 4) return;
+    if (STOP) return;
+    if (x.status !== 200) { lineB(box, 'API erreur ' + x.status + ' ' + parseErr(x.responseText), 'bad'); failMove(); return; }
+    var d = null;
+    try { d = JSON.parse(x.responseText); } catch (e) { lineB(box, 'JSON invalide depuis API', 'bad'); failMove(); return; }
+    var arr = (d.streams || d.sources || []).slice();
+    lineB(box, 'sources recues: ' + arr.length);
+    arr.sort(function(a, b) { return scoreStream(b) - scoreStream(a); });
+    var maxv = parseInt($('maxv').value, 10);
+    if (!isNaN(maxv) && maxv > 0 && arr.length > maxv) {
+      arr = arr.slice(0, maxv);
+      lineB(box, 'limite: ' + maxv + ' variantes test\u00e9es (score)');
+    }
+    runState.variants = [];
+    for (var i = 0; i < arr.length; i++) {
+      var row = mkRow(arr[i], i + 1);
+      box.tb.appendChild(row.el);
+      runState.variants.push({ v: arr[i], row: row });
+      nTotal++;
+    }
+    processVariants(runState.variants);
+  };
+  x.ontimeout = function() { if (!STOP) { lineB(box, 'API TIMEOUT (15s)', 'bad'); failMove(); } };
+  x.onerror = function() { if (!STOP) { lineB(box, 'API erreur r\u00e9seau', 'bad'); failMove(); } };
+  x.send();
+  function failMove() { runState.mi++; setTimeout(nextMovie, 200); }
+}
+
+var POOL = 4;
+function processVariants(items) {
+  var next = 0;
+  var active = 0;
+  function pump() {
+    while (active < POOL && next < items.length) {
+      active++;
+      (function(item) {
+        testVariant(item.v, runState.current, item.row, function() {
+          active--;
+          pump();
+        });
+      })(items[next]);
+      next++;
+    }
+    if (active === 0) { runState.mi++; setTimeout(nextMovie, 150); }
+  }
+  pump();
+}
+
+function finish() {
+  var el = $('sum');
+  el.style.display = 'block';
+  el.textContent = 'Termin\u00e9 \u2014 ' + nTotal + ' variantes: ' + nOk + ' OK, ' + nWarn + ' partiel, ' + nBad + ' \u00e9chec';
+  el.className = 'sum';
+}
+
+/* ===== Pipeline de test d'une variante ===== */
+
+function testVariant(v, test, row, done) {
+  row.detail.innerHTML = '';
+  row.state = 'run';
+  row.status.textContent = 'analyse...';
+  row.status.className = 'verdict run';
+  var finished = false;
+  var realDone = done;
+  var watchdog = setTimeout(function() {
+    if (finished) return;
+    finished = true;
+    line(row, 'TIMEOUT GLOBAL 60s — variante abandonnée', 'bad');
+    badV(row, 'TIMEOUT GLOBAL 60s');
+    realDone();
+  }, 60000);
+  done = function() {
+    if (finished) return;
+    finished = true;
+    clearTimeout(watchdog);
+    realDone();
+  };
+  var srcUrl = v.url || '';
+  if (!srcUrl) { line(row, 'source sans url', 'bad'); badV(row, 'PAS D\u2019URL'); done(); return; }
+  var finalUrl = fixUrl(srcUrl);
+  line(row, 'name=' + (v.name || '') + ' | q=' + (v.quality || ''));
+  line(row, 'url=' + trunc(finalUrl, 120));
+  if (finalUrl.indexOf('m3u8-proxy') >= 0) testHls(finalUrl, row, done);
+  else testDirect(finalUrl, row, done);
+}
+
+function testHls(finalUrl, row, done) {
+  line(row, 'playlist m3u8-proxy...');
+  var x = new XMLHttpRequest();
+  x.open('GET', finalUrl, true);
+  x.timeout = 12000;
+  x.onreadystatechange = function() {
+    if (x.readyState !== 4) return;
+    if (STOP) { return; }
+    var ct = x.getResponseHeader('Content-Type') || '?';
+    var body = x.responseText || '';
+    line(row, 'playlist: HTTP ' + x.status + ' | type=' + ct + ' | ' + body.length + ' o');
+    if (x.status !== 200) {
+      var em = parseErr(body);
+      badV(row, 'HTTP ' + x.status + (em ? ' | ' + trunc(em, 100) : ''));
+      if (em) line(row, 'proxy: ' + trunc(em, 140), 'bad');
+      done();
+      return;
+    }
+    if (body.indexOf('#EXTM3U') === -1 && body.indexOf('#EXT-X-') === -1) {
+      badV(row, 'PAS UN PLAYLIST HLS');
+      line(row, 'preview: ' + trunc(body.replace(/\s+/g, ' '), 160), 'bad');
+      done();
+      return;
+    }
+    var nInf = countLines(body, '#EXTINF:');
+    var nKey = countLines(body, '#EXT-X-KEY');
+    var nDec = countLines(body, 'dec-ts-proxy');
+    var nTs = countLines(body, '/ts-proxy?');
+    line(row, 'EXTINF=' + nInf + ' | KEY=' + nKey + ' | dec-ts-proxy=' + nDec + ' | ts-proxy=' + nTs);
+    if (body.indexOf('#EXT-X-STREAM-INF') >= 0) line(row, 'MASTER: le proxy choisit la variante', 'warn');
+    if (nKey > 0) line(row, 'ATTENTION: AES EXT-X-KEY pr\u00e9sent \u2014 la TV devra d\u00e9chiffrer elle-m\u00eame', 'warn');
+    if (nInf === 0) { badV(row, 'PLAYLIST SANS SEGMENTS'); done(); return; }
+    var seg = firstSegUrl(body);
+    if (!seg) { badV(row, 'PREMIER SEGMENT INTROUVABLE'); done(); return; }
+    line(row, 'segment0=' + trunc(seg, 120));
+    testSegment(seg, finalUrl, row, done);
+  };
+  x.ontimeout = function() { if (!STOP) { badV(row, 'TIMEOUT playlist (12s)'); done(); } };
+  x.onerror = function() { if (!STOP) { badV(row, 'ERREUR R\u00c9SEAU playlist'); done(); } };
+  x.send();
+}
+
+function testSegment(seg, finalUrl, row, done) {
+  line(row, 'segment0: chargement...');
+  var x = new XMLHttpRequest();
+  try { x.responseType = 'arraybuffer'; } catch (e) {}
+  x.open('GET', seg, true);
+  x.timeout = 15000;
+  x.setRequestHeader('Range', 'bytes=0-2047');
+  x.onreadystatechange = function() {
+    if (x.readyState !== 4) return;
+    if (STOP) { return; }
+    var ct = x.getResponseHeader('Content-Type') || '?';
+    var status = x.status;
+    var bytes = -1, sync0 = -1, sync188 = -1;
+    var arr = null;
+    try { arr = x.response; } catch (e) {}
+    if (arr && arr.byteLength) {
+      bytes = arr.byteLength;
+      var u = new Uint8Array(arr);
+      sync0 = u.length ? u[0] : -1;
+      sync188 = u.length > 188 ? u[188] : -1;
+    }
+    line(row, 'segment: HTTP ' + status + ' | type=' + ct + ' | ' + (bytes >= 0 ? bytes + ' o' : '? o') + ' | sync0=' + (sync0 < 0 ? '-' : sync0.toString(16)) + ' sync188=' + (sync188 < 0 ? '-' : sync188.toString(16)));
+    if (status !== 200 && status !== 206) {
+      badV(row, 'SEGMENT HTTP ' + status + (bytes < 0 ? ' ' + parseErr(x.responseText) : ''));
+      done();
+      return;
+    }
+    if (sync0 !== 0x47 || sync188 !== 0x47) {
+      badV(row, 'SEGMENT NON-TS (pas de sync 0x47)');
+      line(row, 'le segment ne commence pas par un paquet TS valide', 'bad');
+      done();
+      return;
+    }
+    if (seg.indexOf('dec-ts-proxy') >= 0) {
+      okV(row, 'PLAYLIST OK + AES D\u00c9CRYPT\u00c9');
+      line(row, 'AES-128 d\u00e9crypt\u00e9 c\u00f4t\u00e9 serveur \u2014 TS valide', 'ok');
+    } else {
+      okV(row, 'PLAYLIST + SEGMENT OK');
+    }
+    maybeVideo(finalUrl, row, done);
+  };
+  x.ontimeout = function() { if (!STOP) { badV(row, 'TIMEOUT segment (15s)'); done(); } };
+  x.onerror = function() { if (!STOP) { badV(row, 'ERREUR R\u00c9SEAU segment'); done(); } };
+  x.send();
+}
+
+function testDirect(finalUrl, row, done) {
+  line(row, 'fichier direct (mp4/ts/mkv)...');
+  var x = new XMLHttpRequest();
+  try { x.responseType = 'arraybuffer'; } catch (e) {}
+  x.open('GET', finalUrl, true);
+  x.timeout = 12000;
+  x.setRequestHeader('Range', 'bytes=0-65535');
+  x.onreadystatechange = function() {
+    if (x.readyState !== 4) return;
+    if (STOP) { return; }
+    var ct = x.getResponseHeader('Content-Type') || '?';
+    var status = x.status;
+    var arr = null;
+    try { arr = x.response; } catch (e) {}
+    if (status !== 200 && status !== 206) {
+      var em = parseErr(x.responseText);
+      badV(row, 'HTTP ' + status + (em ? ' | ' + trunc(em, 100) : ''));
+      if (em) line(row, 'proxy: ' + trunc(em, 140), 'bad');
+      done();
+      return;
+    }
+    var u = (arr && arr.byteLength) ? new Uint8Array(arr) : null;
+    var magic = '';
+    if (u && u.length >= 8) for (var i = 0; i < 8; i++) {
+      var hb = u[i].toString(16);
+      if (hb.length === 1) hb = '0' + hb;
+      magic += hb;
+    }
+    var label = 'INCONNU';
+    if (u && u.length >= 8 && String.fromCharCode(u[4], u[5], u[6], u[7]) === 'ftyp') label = 'MP4';
+    else if (u && u.length && u[0] === 0x47) label = 'TS';
+    else if (u && u.length >= 4 && u[0] === 0x1A && u[1] === 0x45 && u[2] === 0xDF && u[3] === 0xA3) label = 'MKV/WEBM';
+    line(row, 'fichier: HTTP ' + status + ' | type=' + ct + ' | ' + (u ? u.length + ' o' : '? o') + ' | magic=' + magic + ' => ' + label);
+    if (label === 'INCONNU' && ct.indexOf('json') >= 0) {
+      var em2 = parseErr(x.responseText);
+      if (em2) { badV(row, 'ERREUR PROXY: ' + trunc(em2, 100)); done(); return; }
+    }
+    if (label === 'INCONNU') {
+      var preview = '';
+      if (u) {
+        var str = '';
+        for (var k = 0; k < Math.min(u.length, 400); k++) str += String.fromCharCode(u[k]);
+        var tm = str.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (tm) preview = 'titre: ' + tm[1].trim();
+        else {
+          var txt = str.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          preview = 'html: ' + trunc(txt, 80);
+        }
+      } else if (x.responseText) {
+        preview = 'body: ' + trunc(x.responseText.replace(/\s+/g, ' '), 80);
+      }
+      if (preview) line(row, preview, 'warn');
+    }
+    if (label === 'MP4' || label === 'TS') okV(row, 'FICHIER OK (' + label + ')');
+    else warnV(row, 'CONTENU: ' + label + ' (' + ct + ')');
+    maybeVideo(finalUrl, row, done);
+  };
+  x.ontimeout = function() { if (!STOP) { badV(row, 'TIMEOUT fichier (12s)'); done(); } };
+  x.onerror = function() { if (!STOP) { badV(row, 'ERREUR R\u00c9SEAU fichier'); done(); } };
+  x.send();
+}
+
+var VIDEO_BUSY = false;
+var VIDEO_QUEUE = [];
+
+function maybeVideo(finalUrl, row, done) {
+  if (!$('docVideo').checked) { done(); return; }
+  VIDEO_QUEUE.push({ url: finalUrl, row: row, done: done });
+  pumpVideo();
+}
+
+function pumpVideo() {
+  if (VIDEO_BUSY || !VIDEO_QUEUE.length) return;
+  var job = VIDEO_QUEUE.shift();
+  VIDEO_BUSY = true;
+  runVideo(job.url, job.row, function() { VIDEO_BUSY = false; pumpVideo(); });
+}
+
+function runVideo(finalUrl, row, done) {
+  var v = $('vt');
+  clearTimeout(videoTimer);
+  v.onerror = null; v.onloadeddata = null; v.onplaying = null; v.onstalled = null;
+  try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
+  line(row, 'lecture vid\u00e9o...');
+  var started = false;
+  v.onloadeddata = function() { line(row, 'video: premiers octets m\u00e9dia OK', 'ok'); };
+  v.onstalled = function() { line(row, 'video: stalled (attente de data)', 'warn'); };
+  v.onplaying = function() {
+    clearTimeout(videoTimer);
+    started = true;
+    line(row, 'video: LECTURE OK (' + (v.videoWidth || '?') + 'x' + (v.videoHeight || '?') + ')', 'ok');
+    if (row.state !== 'bad') okV(row, 'LECTURE OK');
+    done();
+  };
+  v.onerror = function() {
+    clearTimeout(videoTimer);
+    var c = v.error ? v.error.code : '?';
+    var names = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'CODEC NON SUPPORT\u00c9' };
+    line(row, 'video: ERREUR code ' + c + ' (' + (names[c] || '?') + ')', 'bad');
+    if (row.state !== 'bad') warnV(row, 'VIDEO KO code ' + c);
+    done();
+  };
+  videoTimer = setTimeout(function() {
+    if (started) return;
+    line(row, 'video: TIMEOUT 15s (ni lecture ni erreur)', 'warn');
+    if (row.state !== 'bad') warnV(row, 'VIDEO TIMEOUT 15s');
+    done();
+  }, 15000);
+  try { v.muted = true; v.src = finalUrl; v.load(); v.play(); }
+  catch (e) { line(row, 'video: exception ' + e.message, 'bad'); badV(row, 'VIDEO EXCEPTION'); done(); }
+}
+
+
+/* ===== Tests basiques decodeur ===== */
+
+function st(id, msg, err) {
+  var el = $(id);
+  el.textContent = msg;
+  el.className = 'st' + (err ? ' err' : '');
+}
+function watch(id, sid) {
+  var v = $(id);
+  v.onloadstart = function() { st(sid, '1/6 d\u00e9but chargement...'); };
+  v.onloadedmetadata = function() { st(sid, '2/6 metadata OK (' + (v.videoWidth || '?') + 'x' + (v.videoHeight || '?') + ')'); };
+  v.onloadeddata = function() { st(sid, '3/6 premi\u00e8res images OK'); };
+  v.oncanplay = function() { st(sid, '4/6 peut lire'); };
+  v.onplaying = function() { st(sid, '5/6 LECTURE EN COURS'); };
+  v.ontimeupdate = function() { if (v.currentTime > 0.2) st(sid, '6/6 lecture avanc\u00e9e: ' + v.currentTime.toFixed(1) + 's'); };
+  v.onwaiting = function() { st(sid, 'en attente (buffering)...'); };
+  v.onstalled = function() { st(sid, 'stalled (pas de donn\u00e9es)'); };
+  v.onerror = function() {
+    var c = v.error ? v.error.code : '?';
+    var m = (c === 4) ? 'ERREUR: format/codec NON SUPPORT\u00c9 (code 4)' : ('ERREUR code ' + c);
+    st(sid, m, true);
+  };
+  var last = 0;
+  var timer = setInterval(function() {
+    if (v.readyState !== 0 && v.readyState !== undefined) {
+      st(sid, 'S\u00e9tat ' + v.readyState + '/4 | WxH=' + (v.videoWidth || '?') + 'x' + (v.videoHeight || '?') + ' | t=' + (v.currentTime || 0).toFixed(1) + 's | dur=' + (isFinite(v.duration) ? v.duration.toFixed(1) : '?') + 's');
+    }
+    if (v.currentTime > 0.2) {
+      if (v.currentTime > last) { last = v.currentTime; st(sid, '6/6 EN LECTURE ' + v.currentTime.toFixed(1) + 's'); }
+    }
+  }, 1000);
+}
+function play(vid, sid, url) {
+  var v = $(vid);
+  st(sid, '0/6 chargement ' + url + ' ...');
+  v.src = url;
+  v.load();
+  v.play();
+}
+
+watch('v1', 's1');
+watch('v2', 's2');
+watch('v3', 's3');
+watch('v4', 's4');
+watch('v5', 's5');
+</script>
+</body>
+</html>

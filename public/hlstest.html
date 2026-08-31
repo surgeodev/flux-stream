@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Test HLS direct</title>
+<style>
+body { background:#111; color:#eee; font-family:sans-serif; margin:0; }
+#v { width:100vw; height:76vh; background:#000; }
+#log { padding:8px; font-size:12px; white-space:pre-wrap; max-height:20vh; overflow-y:auto; }
+input { width:70%; padding:6px; margin:4px; font-size:16px; }
+button { padding:8px 14px; margin:4px; font-size:15px; }
+</style>
+</head>
+<body>
+<video id="v" controls autoplay playsinline></video>
+<div>
+  <input id="id" value="1081003" placeholder="TMDB id">
+  <select id="type"><option value="movie">Film</option><option value="tv">Série</option></select>
+  <button onclick="play()">Lancer HLS direct</button>
+  <button onclick="playLite()">HLS Lite baseline</button>
+  <button onclick="playTb2()">Test tb2 statique</button>
+  <button onclick="playManual()">URL manuelle</button>
+</div>
+<div id="log"></div>
+<input id="manual" placeholder="URL m3u8 manuelle" style="width:96%">
+<script>
+var v = document.getElementById('v');
+var log = document.getElementById('log');
+function L(msg) {
+  log.textContent = new Date().toLocaleTimeString() + ' ' + msg + '\n' + log.textContent;
+  try {
+    fetch('/api/error-log', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({src:'hlstest', msg:String(msg).slice(0,300)})});
+  } catch(e) {}
+}
+function play() {
+  var id = document.getElementById('id').value.trim();
+  var type = document.getElementById('type').value;
+  L('resolve /api/hls-direct?id=' + id + '&type=' + type);
+  fetch('/api/hls-direct?id=' + id + '&type=' + type + '&season=1&episode=1')
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (j.error) { L('ERR ' + j.error); return; }
+      L('URL: ' + j.url);
+      v.src = j.url;
+      v.play().catch(function(e){ L('play() reject: ' + e); });
+    })
+    .catch(function(e){ L('fetch fail: ' + e); });
+}
+function playManual() {
+  var u = document.getElementById('manual').value.trim();
+  if (!u) { L('vide'); return; }
+  L('URL manuelle: ' + u);
+  v.src = u;
+  v.play().catch(function(e){ L('play() reject: ' + e); });
+}
+function playLite() {
+  var id = document.getElementById('id').value.trim();
+  var type = document.getElementById('type').value;
+  var u = '/api/hls-lite?tmdb=' + id + '&type=' + type;
+  L('HLS Lite (baseline 640p): ' + u);
+  v.src = u;
+  v.play().catch(function(e){ L('play() reject: ' + e); });
+}
+function playTb2() {
+  var u = '/tb2.m3u8';
+  L('Test tb2 statique (seg hls-lite): ' + u);
+  v.src = u;
+  v.play().catch(function(e){ L('play() reject: ' + e); });
+}
+['loadedmetadata','loadeddata','canplay','playing','pause','ended','error','stalled','waiting','timeupdate'].forEach(function(ev){
+  v.addEventListener(ev, function(){
+    if (ev === 'timeupdate') return;
+    L('EVENT ' + ev + (ev==='error' ? ' code=' + v.error + ' msg=' + (v.error ? v.error.message : '') : ''));
+  });
+});
+L('page prête');
+</script>
+</body>
+</html>

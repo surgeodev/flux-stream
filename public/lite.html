@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLUX TV — Accueil</title>
+<link rel="stylesheet" href="lite.css">
+<style>
+  .row-section { padding: 12px 4% 32px; position: relative; }
+</style>
+</head>
+<body class="home">
+
+<header>
+  <h1><img src="logo.png" alt="FLUX"></h1>
+  <nav id="topnav">
+    <button id="navHome" class="sel" onclick="location.href='lite.html'">Accueil</button>
+    <button id="navMovie" onclick="location.href='litemovie.html'">Films</button>
+    <button id="navTv" onclick="location.href='litetv.html'">Séries</button>
+    <button id="navSearch" onclick="location.href='litesearch.html'">Recherche</button>
+    <button id="navFs" onclick="toggleFullscreen()" aria-label="Plein écran">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg>
+    </button>
+  </nav>
+</header>
+
+<main>
+  <div class="row-section" id="rowContinue" style="display:none">
+    <div class="row-title">Continuer à regarder <em>· Reprendre là où vous en étiez</em></div>
+    <div class="row-scroll" id="rowContinueScroll"></div>
+  </div>
+
+  <div class="row-section" id="rowTrending">
+    <div class="row-title">Tendances du moment</div>
+    <div class="row-scroll" id="grid"></div>
+  </div>
+
+  <div class="row-section" id="rowMovies" style="display:none">
+    <div class="row-title">Films populaires</div>
+    <div class="row-scroll" id="rowMoviesScroll"></div>
+  </div>
+
+  <div class="row-section" id="rowTv" style="display:none">
+    <div class="row-title">Séries populaires</div>
+    <div class="row-scroll" id="rowTvScroll"></div>
+  </div>
+
+  <div id="msg">Chargement...</div>
+</main>
+
+<div id="hint">OK / Entrée = ouvrir · flèches = naviguer · Retour = accueil</div>
+<div id="dbg">KC:-</div>
+
+<script>
+var LITE_PAGE = 'all';
+var LITE_HOME = 1;
+</script>
+<script src="lrud.js"></script>
+<script src="lite-common.js"></script>
+<script src="cast-tv.js"></script>
+<script>
+/* ===== Accueil à la YouTube : rangées de vignettes 16:9 ===== */
+
+function seenSet(list) {
+  var out = {};
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && list[i].id) out[list[i].id] = 1;
+  }
+  return out;
+}
+
+function dropSeen(list, seen) {
+  var out = [];
+  for (var i = 0; i < list.length; i++) {
+    if (!list[i] || !list[i].id || !seen[list[i].id]) {
+      out.push(list[i]);
+      if (list[i] && list[i].id) seen[list[i].id] = 1;
+    }
+  }
+  return out;
+}
+
+function ytThumb(it) {
+  var p = it.backdrop || it.poster || '';
+  if (!p) return '';
+  return '/api/poster?path=' + encodeURIComponent(p) + '&size=w780';
+}
+
+/* Carte YouTube : vignette 16:9 en haut, titre + méta en dessous */
+function buildRow(containerId, list, stagger) {
+  var box = document.getElementById(containerId);
+  if (!box) return;
+  box.innerHTML = '';
+  for (var i = 0; i < list.length; i++) {
+    (function(it, idx) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'card_' + containerId + '_' + idx;
+      card.tabIndex = 0;
+      card.style.webkitAnimationDelay = (idx * (stagger || 40)) + 'ms';
+      card.style.animationDelay = (idx * (stagger || 40)) + 'ms';
+      var thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      var img = document.createElement('img');
+      var src = ytThumb(it);
+      if (src) img.src = src;
+      img.alt = '';
+      img.onerror = function() { this.style.visibility = 'hidden'; };
+      thumb.appendChild(img);
+      if (it.rating && it.rating >= 6) {
+        var badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.innerHTML = '<i>&#9733;</i> ' + (Math.round(it.rating * 10) / 10).toFixed(1);
+        thumb.appendChild(badge);
+      }
+      if (it.pct && it.pct > 2 && it.pct < 96) {
+        var prog = document.createElement('div');
+        prog.className = 'card-progress';
+        var fill = document.createElement('div');
+        fill.className = 'card-progress-fill';
+        fill.style.width = Math.round(it.pct) + '%';
+        prog.appendChild(fill);
+        thumb.appendChild(prog);
+      }
+      card.appendChild(thumb);
+      var t = document.createElement('div');
+      t.className = 't';
+      t.innerHTML = it.title || '';
+      card.appendChild(t);
+      var m = document.createElement('div');
+      m.className = 'm';
+      var bits = [];
+      bits.push(it.type === 'tv' ? 'S\u00e9rie' : 'Film');
+      if (it.year) bits.push(it.year);
+      m.innerHTML = bits.join(' \u00b7 ');
+      card.appendChild(m);
+      card.onclick = function() { openItem(it); };
+      box.appendChild(card);
+      cardEls.push(card);
+      /* L'animation cardIn en fill-mode:both fige le transform final et
+         bloquerait le scale du focus : on la retire une fois terminée */
+      setTimeout(function() {
+        card.style.webkitAnimation = 'none';
+        card.style.animation = 'none';
+      }, (idx * (stagger || 40)) + 600);
+    })(list[i], i);
+  }
+}
+
+/* Complète les entrées "Continuer" (sauvegardées sans image) avec les
+   données trouvées dans les rangées tendances, et persiste le résultat. */
+function enrichCont(list, ledger) {
+  for (var i = 0; i < list.length; i++) {
+    var it = list[i];
+    if (!it) continue;
+    var rows = (it.type === 'tv') ? [ledger.tv, ledger.all] : [ledger.movie, ledger.all];
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r] || [];
+      for (var j = 0; j < row.length; j++) {
+        var c = row[j];
+        if (!c || c.id !== it.id) continue;
+        if (it.type && c.type && c.type !== it.type) continue;
+        if (!it.backdrop && c.backdrop) it.backdrop = c.backdrop;
+        if (!it.poster && c.poster) it.poster = c.poster;
+        if (!it.year && c.year) it.year = c.year;
+        if (!it.rating && c.rating) it.rating = c.rating;
+        if (!it.title && c.title) it.title = c.title;
+      }
+    }
+  }
+  try {
+    localStorage.setItem('flux_continue', JSON.stringify(list));
+  } catch (e) {}
+}
+
+/* ===== Chargement des 4 rangées (chaque rangée dédupliquée) ===== */
+function loadHome() {
+  var seen = {};
+  var ledger = { all: [], movie: [], tv: [] };
+  var cont = [];
+  var pending = 3;
+
+  try {
+    var saved = JSON.parse(localStorage.getItem('flux_continue') || '[]');
+    for (var s = 0; s < saved.length && cont.length < 12; s++) {
+      if (saved[s] && saved[s].id && !seen[saved[s].id]
+          && (!saved[s].pct || saved[s].pct < 96)) {
+        cont.push(saved[s]);
+        seen[saved[s].id] = 1;
+      }
+    }
+  } catch (e) {}
+
+  var done = function() {
+    if (--pending > 0) return;
+    if (cont.length) enrichCont(cont, ledger);
+    var boxes = [];
+    if (cont.length) {
+      document.getElementById('rowContinue').style.display = '';
+      buildRow('rowContinueScroll', cont, 40);
+      boxes.push('rowContinueScroll');
+    }
+    var itemsAll = dropSeen(ledger.all, seen);
+    items = itemsAll;
+    buildRow('grid', itemsAll, 40);
+    boxes.push('grid');
+    var itemsMovie = dropSeen(ledger.movie, seen);
+    if (itemsMovie.length) {
+      document.getElementById('rowMovies').style.display = '';
+      buildRow('rowMoviesScroll', itemsMovie, 50);
+      boxes.push('rowMoviesScroll');
+    }
+    var itemsTv = dropSeen(ledger.tv, seen);
+    if (itemsTv.length) {
+      document.getElementById('rowTv').style.display = '';
+      buildRow('rowTvScroll', itemsTv, 50);
+      boxes.push('rowTvScroll');
+    }
+    window.__ROW_BOXES = boxes;
+    msg('');
+    registerGridNav();
+  };
+
+  var fetch = function(type, key) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/lite/trending?type=' + type, true);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          try { ledger[key] = (JSON.parse(xhr.responseText).items || []); } catch (err) {}
+        }
+        done();
+      }
+    };
+    xhr.send();
+  };
+  fetch('all', 'all');
+  fetch('movie', 'movie');
+  fetch('tv', 'tv');
+}
+
+/* ===== Boot ===== */
+detectCapabilities();
+loadHome();
+</script>
+</body>
+</html>

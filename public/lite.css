@@ -1,0 +1,393 @@
+/* ======================================================================
+   FLUX — Netflix 2025 Design System
+   Identite: rouge sang #C4001A / noir absolu #0A0A0A
+   Samsung 2014 WebKit compatible (-webkit- prefixes, ES5-safe)
+   ====================================================================== */
+
+/* ===== Reset & Base ===== */
+* { -webkit-box-sizing: border-box; box-sizing: border-box; margin: 0; padding: 0; }
+html { background: #0A0A0A; }
+body { background: #0A0A0A; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-user-select: none; -moz-user-select: none; user-select: none; overflow-x: hidden; }
+h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
+
+/* Grain texture overlay for depth */
+body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 99999; opacity: 0.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-repeat: repeat; background-size: 256px 256px; }
+
+/* ===== Curseur personnalisé (souris) : flèche moderne 32px, hotspot 6,6 ===== */
+body, body * { cursor: url('cursor.png') 6 6, auto; }
+
+/* Ambiance cinéma : halo rouge #C4001A autour de l'écran
+   (lumière de salle de cinéma, corners et bande du bas) */
+body::after { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 99998; background: -webkit-radial-gradient(ellipse at 50% -12%, rgba(196,0,26,0.12), transparent 55%), -webkit-radial-gradient(ellipse at 100% 115%, rgba(196,0,26,0.09), transparent 55%), -webkit-radial-gradient(ellipse at 0% 115%, rgba(196,0,26,0.07), transparent 50%), -webkit-linear-gradient(0deg, rgba(196,0,26,0.05), transparent 28%); background: radial-gradient(ellipse at 50% -12%, rgba(196,0,26,0.12), transparent 55%), radial-gradient(ellipse at 100% 115%, rgba(196,0,26,0.09), transparent 55%), radial-gradient(ellipse at 0% 115%, rgba(196,0,26,0.07), transparent 50%), linear-gradient(0deg, rgba(196,0,26,0.05), transparent 28%); }
+
+/* ===== Navigation ===== */
+header { position: fixed; top: 0; left: 0; right: 0; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; padding: 0 4%; height: 85px; background: -webkit-linear-gradient(rgba(10,10,10,1) 0%, rgba(10,10,10,0.85) 60%, transparent 100%); background: linear-gradient(rgba(10,10,10,1) 0%, rgba(10,10,10,0.85) 60%, transparent 100%); z-index: 1000; -webkit-transition: background 0.4s ease; transition: background 0.4s ease; }
+header h1 { -webkit-box-flex: 0; -webkit-flex: 0 0 auto; flex: 0 0 auto; margin-right: 50px; }
+header h1 img { display: block; height: 44px; }
+header nav { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; position: absolute; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
+nav button { background: none; color: #999; border: none; padding: 10px 25px; font-size: 18px; font-weight: 500; cursor: pointer; font-family: inherit; letter-spacing: 0.3px; -webkit-transition: color 0.2s ease; transition: color 0.2s ease; border-radius: 4px; position: relative; z-index: 2; }
+nav button:hover { color: #e5e5e5; }
+nav button.sel { color: #fff; font-weight: 700; }
+nav button:focus { outline: none; color: #fff; }
+#navFs svg { width: 22px; height: 22px; display: block; -webkit-transition: -webkit-transform 0.2s; transition: transform 0.2s; }
+#navFs:hover svg, #navFs:focus svg { -webkit-transform: scale(1.15); transform: scale(1.15); }
+
+/* ===== Main ===== */
+main { padding-top: 85px; min-height: 100vh; }
+h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 14px; letter-spacing: 0.2px; }
+
+/* ===== Hero Section ===== */
+.hero, .hero-wrap { position: relative; width: 100%; height: 75vh; min-height: 500px; max-height: 700px; overflow: hidden; margin-bottom: -80px; z-index: 1; }
+.hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; -webkit-transition: opacity 0.8s ease; transition: opacity 0.8s ease; }
+.hero-slide.active { opacity: 1; }
+.hero-slide img { width: 100%; height: 100%; -webkit-object-fit: cover; object-fit: cover; -webkit-filter: brightness(0.65); filter: brightness(0.65); }
+.hero-slide.active img { -webkit-animation: kenburns 12s ease-out both; animation: kenburns 12s ease-out both; }
+@-webkit-keyframes kenburns { from { -webkit-transform: scale(1); } to { -webkit-transform: scale(1.08); } }
+@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.08); } }
+.hero-topgrad { position: absolute; top: 0; left: 0; right: 0; height: 40%; background: -webkit-linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.25) 55%, transparent); background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.25) 55%, transparent); z-index: 3; pointer-events: none; }
+.hero-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: -webkit-linear-gradient(90deg, #0A0A0A 0%, rgba(10,10,10,0.85) 25%, rgba(10,10,10,0.4) 50%, rgba(10,10,10,0.1) 70%, transparent 100%); background: linear-gradient(90deg, #0A0A0A 0%, rgba(10,10,10,0.85) 25%, rgba(10,10,10,0.4) 50%, rgba(10,10,10,0.1) 70%, transparent 100%); z-index: 2; }
+.hero-gradient::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 45%; background: -webkit-linear-gradient(transparent, rgba(10,10,10,0.9) 75%, #0A0A0A); background: linear-gradient(transparent, rgba(10,10,10,0.9) 75%, #0A0A0A); z-index: 3; }
+.hero-vignette { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: -webkit-radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%); background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%); z-index: 4; pointer-events: none; }
+.hero-content { position: absolute; bottom: 18%; left: 4%; z-index: 10; max-width: 500px; }
+.hero-badge { display: inline-block; font-size: 12px; font-weight: 700; color: #C4001A; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+.hero-title { font-size: 48px; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+.hero-meta { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; font-size: 14px; color: #999; margin-bottom: 18px; gap: 0; }
+.hero-meta span { margin: 0 8px; }
+.hero-meta .match { color: #46d369; font-weight: 700; }
+.hero-desc { font-size: 15px; color: #ccc; line-height: 1.5; margin-bottom: 22px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hero-btns { display: -webkit-box; display: -webkit-flex; display: flex; gap: 10px; }
+.hero-btn { display: inline-block; padding: 12px 28px; font-size: 15px; font-weight: 700; font-family: inherit; border: none; border-radius: 4px; cursor: pointer; -webkit-transition: -webkit-transform 0.15s, background 0.15s; transition: transform 0.15s, background 0.15s; letter-spacing: 0.3px; }
+.hero-btn:hover { -webkit-transform: scale(1.04); transform: scale(1.04); }
+.hero-btn:active { -webkit-transform: scale(0.97); transform: scale(0.97); }
+.hero-play { background: #fff; color: #0A0A0A; }
+.hero-info { background: rgba(100,100,100,0.6); color: #fff; }
+.hero-info:hover { background: rgba(100,100,100,0.8); }
+
+/* Hero dots */
+.hero-dots { position: absolute; bottom: 6%; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); z-index: 10; display: -webkit-box; display: -webkit-flex; display: flex; gap: 8px; }
+.hero-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; -webkit-transition: background 0.3s, -webkit-transform 0.3s; transition: background 0.3s, transform 0.3s; }
+.hero-dot.active { background: #C4001A; -webkit-transform: scale(1.3); transform: scale(1.3); -webkit-box-shadow: 0 0 8px rgba(196,0,26,0.5); box-shadow: 0 0 8px rgba(196,0,26,0.5); }
+
+/* ===== Content Rows ===== */
+.row-section { padding: 15px 4% 40px; position: relative; }
+.row-title { font-size: 23px; font-weight: 700; color: #fff; margin-bottom: 15px; padding-left: 2px; }
+.row-title em { font-style: normal; color: #999; font-weight: 400; font-size: 18px; margin-left: 10px; }
+.row-scroll { position: relative; white-space: nowrap; overflow-x: auto; overflow-y: hidden; padding: 20px 0 35px; margin: -20px 0 -30px; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.row-scroll::-webkit-scrollbar { display: none; }
+
+/* ===== Cards =====
+   Largeur en vw : échelle ×1.25 → ~2,8 cartes visibles par ligne.
+   Poster 2:3 portrait (comme My List Netflix) — pas de backdrop/scène de film.
+   Focus TV Netflix-authentique : scale + ring blanc sur la seule carte ciblée. */
+.card { display: inline-block; vertical-align: top; width: 31.6vw; margin-right: 1.25vw; cursor: pointer; white-space: normal; position: relative; border-radius: 10px; overflow: visible; -webkit-transition: -webkit-transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), -webkit-box-shadow 0.3s ease; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease; -webkit-transform-origin: center bottom; transform-origin: center bottom; }
+.card:hover, .card:focus { -webkit-transform: scale(1.07) translateY(-6px); transform: scale(1.07) translateY(-6px); z-index: 20; outline: none; -webkit-box-shadow: 0 0 0 2px rgba(255,255,255,0.85), 0 0 40px rgba(196,0,26,0.35), 0 18px 48px rgba(0,0,0,0.75); box-shadow: 0 0 0 2px rgba(255,255,255,0.85), 0 0 40px rgba(196,0,26,0.35), 0 18px 48px rgba(0,0,0,0.75); }
+
+/* Poster portrait 2:3 */
+.card .poster { position: relative; width: 31.6vw; height: 47.4vw; background: #141414; border-radius: 10px; overflow: hidden; }
+.card .poster img { width: 100%; height: 100%; display: block; -webkit-object-fit: cover; object-fit: cover; -webkit-transition: -webkit-filter 0.3s; transition: filter 0.3s; }
+
+/* Vignette on poster */
+.card .poster::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: -webkit-linear-gradient(transparent 62%, rgba(0,0,0,0.45) 100%); background: linear-gradient(transparent 62%, rgba(0,0,0,0.45) 100%); z-index: 1; pointer-events: none; }
+
+/* Badge */
+.card .badge { position: absolute; top: 7px; right: 7px; background: rgba(10,10,10,0.85); border-radius: 4px; padding: 3px 8px; font-size: 14px; font-weight: 700; color: #fff; z-index: 3; }
+.card .badge i { font-style: normal; color: #46d369; }
+
+/* Title below card */
+.card .t { font-size: 19px; font-weight: 600; color: #e5e5e5; margin-top: 13px; line-height: 1.3; overflow: hidden; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.card .m { font-size: 16px; color: #666; margin-top: 6px; }
+
+/* Progress bar on card (continue watching) */
+.card .card-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.15); z-index: 4; border-radius: 0 0 10px 10px; overflow: hidden; }
+.card .card-progress-fill { height: 100%; background: #C4001A; border-radius: 0 0 10px 10px; }
+
+/* Stagger entrance animation */
+@-webkit-keyframes cardIn { from { opacity: 0; -webkit-transform: translateY(20px) scale(0.95); } to { opacity: 1; -webkit-transform: translateY(0) scale(1); } }
+@keyframes cardIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.card { -webkit-animation: cardIn 0.4s ease-out both; animation: cardIn 0.4s ease-out both; }
+
+/* ===== Message / Status ===== */
+#msg, #pmsg { padding: 24px 0; color: #666; font-size: 15px; text-align: center; }
+#msg:empty, #pmsg:empty { display: none; }
+
+/* ===== Search ===== */
+#searchrow { margin-bottom: 20px; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; }
+#q { background: #1A1A1A; color: #fff; border: 1px solid #222; border-radius: 4px; padding: 14px 20px; font-size: 16px; width: 50%; max-width: 500px; margin-right: 12px; font-family: inherit; -webkit-transition: border-color 0.2s; transition: border-color 0.2s; }
+#q:focus { border-color: #C4001A; outline: none; }
+#sbtn { background: #C4001A; color: #fff; border: none; border-radius: 4px; padding: 14px 32px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; -webkit-transition: background 0.15s, -webkit-transform 0.1s; transition: background 0.15s, transform 0.1s; letter-spacing: 0.3px; }
+#sbtn:hover { background: #D4001E; }
+#sbtn:active { -webkit-transform: scale(0.97); transform: scale(0.97); }
+#sbtn:focus { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ===== Hint / Debug ===== */
+#hint { padding: 16px 0 24px; color: #444; font-size: 12px; text-align: center; }
+#dbg { display: none; }
+
+/* ======================================================================
+   PLAYER — plein écran par défaut (jamais scrollable)
+   ====================================================================== */
+
+#vwrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; background: #000; overflow: hidden; z-index: 1; }
+video { width: 100%; height: 100%; background: #000; display: block; -webkit-object-fit: contain; object-fit: contain; }
+#vwrap.fs { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; }
+#vwrap.fs video { width: 100%; height: 100%; max-height: none; }
+
+/* Title overlay — fondue : visible avec les contrôles (body.ctrls-on),
+   sinon disparaît pendant la lecture */
+#vtop { position: absolute; top: 0; left: 0; right: 0; padding: 48px 5% 80px; background: -webkit-linear-gradient(rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%); background: linear-gradient(rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%); z-index: 5; pointer-events: none; display: block; opacity: 0; -webkit-transition: opacity 0.3s ease; transition: opacity 0.3s ease; }
+body.ctrls-on #vtop { opacity: 1; }
+#vttitle { display: block; font-size: 24px; font-weight: 700; color: #fff; letter-spacing: -0.01em; text-shadow: 0 2px 12px rgba(0,0,0,0.8); }
+#vtsub { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700; color: #C4001A; background: rgba(196,0,26,0.12); border: 1px solid rgba(196,0,26,0.3); border-radius: 3px; padding: 3px 10px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* Subtitles */
+#sub { position: absolute; left: 8%; right: 8%; bottom: 18%; text-align: center; font-size: 1.8em; font-weight: 700; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7); line-height: 1.4; pointer-events: none; z-index: 5; }
+
+/* Spinner */
+#spinner { position: absolute; top: 50%; left: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.08); border-top-color: #C4001A; -webkit-animation: spin 0.8s linear infinite; animation: spin 0.8s linear infinite; display: none; z-index: 4; }
+#spinner.on { display: block; }
+@-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Player state */
+#pstate { position: absolute; top: 44%; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 500; color: #888; letter-spacing: 0.5px; z-index: 4; pointer-events: none; display: none; }
+#pstate.on { display: block; }
+
+/* ======================================================================
+   CONTROLS
+   ====================================================================== */
+
+#ctrls { position: absolute; left: 0; right: 0; bottom: 0; padding: 52px 4% 18px; background: -webkit-linear-gradient(transparent, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.95)); background: linear-gradient(transparent, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.95)); z-index: 6; -webkit-transition: opacity 0.25s ease; transition: opacity 0.25s ease; }
+#ctrls.hid { opacity: 0; pointer-events: none; }
+#ctrls.hid button:focus { opacity: 0; }
+
+/* Progress bar */
+#pbar { position: relative; width: 100%; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; cursor: pointer; margin-bottom: 14px; -webkit-transition: height 0.2s ease; transition: height 0.2s ease; }
+#pbar:hover { height: 5px; }
+#pbuff { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: rgba(255,255,255,0.25); border-radius: 2px; }
+#pfill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #C4001A; border-radius: 2px; -webkit-transition: width 0.1s linear; transition: width 0.1s linear; }
+#pthumb { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #C4001A; border-radius: 50%; left: 0%; opacity: 0; -webkit-transition: opacity 0.15s, -webkit-transform 0.1s; transition: opacity 0.15s, transform 0.1s; -webkit-box-shadow: 0 0 6px rgba(196,0,26,0.6); box-shadow: 0 0 6px rgba(196,0,26,0.6); }
+#pbar:hover #pthumb { opacity: 1; }
+#pbar.drag #pthumb { opacity: 1; -webkit-transform: scale(1.4); transform: scale(1.4); }
+#phover { position: absolute; bottom: 14px; background: rgba(10,10,10,0.9); color: #fff; font-size: 13px; font-weight: 600; padding: 4px 8px; border-radius: 3px; display: none; white-space: nowrap; font-family: 'Courier New', monospace; pointer-events: none; }
+#pbar:hover #phover { display: block; }
+
+/* Controls row */
+#ctrlsRow { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; -webkit-box-pack: start; -webkit-justify-content: flex-start; justify-content: flex-start; }
+.cspacer { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; }
+
+/* Time */
+#ptime { font-size: 13px; color: #aaa; font-family: 'Courier New', monospace; margin: 0 14px; vertical-align: middle; letter-spacing: 0.5px; }
+
+/* Control buttons */
+/* Control buttons — design "pastille" (même langage que #tvnav) :
+   fond translucide, bordure fine, hover rouge C4001A */
+button.cbtn { display: inline-block; background: rgba(255,255,255,0.08); color: #ccc; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; cursor: pointer; font-size: 14px; margin: 0 2px; font-family: inherit; vertical-align: middle; text-align: center; position: relative; -webkit-transition: -webkit-transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s, background 0.15s, border-color 0.15s; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s, background 0.15s, border-color 0.15s; }
+button.cbtn svg { width: 24px; height: 24px; }
+button.cbtn:hover, button.cbtn:focus { color: #fff; background: #C4001A; border-color: #C4001A; outline: none; -webkit-transform: scale(1.12); transform: scale(1.12); }
+button.cbtn:active { -webkit-transform: scale(0.92); transform: scale(0.92); }
+button.cbtn .csp { position: absolute; bottom: 2px; left: 0; right: 0; font-size: 9px; font-weight: 700; color: inherit; text-align: center; }
+
+/* Play button — accent blanc du langage pastille (seul élément plein) */
+#btnPlay { width: 50px; height: 50px; background: #fff !important; border: 1px solid rgba(255,255,255,0.2) !important; border-radius: 8px !important; display: inline-block; text-align: center; }
+#btnPlay svg { width: 26px; height: 26px; }
+#btnPlay svg path { fill: #0A0A0A; }
+#btnPlay:hover, #btnPlay:focus { -webkit-transform: scale(1.15); transform: scale(1.15); background: #fff !important; }
+#btnPlay:active { -webkit-transform: scale(0.95); transform: scale(0.95); }
+
+/* Speed */
+#btnSpeed { color: #ccc; font-weight: 600; font-size: 14px; padding: 8px 10px; }
+#btnSpeed span { color: #ccc; }
+#btnSpeed:hover, #btnSpeed:focus { color: #fff; background: rgba(255,255,255,0.08); }
+#zoomLbl { font-size: 13px; font-weight: 600; }
+
+/* Flash icon */
+#tflash { position: absolute; top: 38%; left: 0; right: 0; text-align: center; z-index: 7; pointer-events: none; opacity: 0; }
+#tflash.show { -webkit-animation: tflash 0.5s ease-out; animation: tflash 0.5s ease-out; }
+@-webkit-keyframes tflash { 0% { opacity: 1; -webkit-transform: scale(1.1); } 100% { opacity: 0; -webkit-transform: scale(1); } }
+@keyframes tflash { 0% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1); } }
+#tflash svg { width: 52px; height: 52px; background: rgba(0,0,0,0.6); border-radius: 50%; padding: 12px; }
+
+/* ======================================================================
+   MENUS POPUP
+   ====================================================================== */
+
+#menuPanel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; display: none; }
+#menuPanel.show { display: block; }
+.mBg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); }
+.mBox { position: absolute; bottom: 150px; right: 4%; width: 320px; max-width: 88%; max-height: 55vh; overflow-y: auto; background: rgba(18,18,18,0.98); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 6px 0; -webkit-box-shadow: 0 8px 40px rgba(0,0,0,0.9); box-shadow: 0 8px 40px rgba(0,0,0,0.9); }
+.mBox::-webkit-scrollbar { width: 4px; }
+.mBox::-webkit-scrollbar-track { background: transparent; }
+.mBox::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.mHead { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; -webkit-box-pack: justify; -webkit-justify-content: space-between; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 4px; }
+.mTitle { color: #666; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+.mClose { background: none; color: #666; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center; -webkit-transition: color 0.15s, background 0.15s; transition: color 0.15s, background 0.15s; }
+.mClose svg { width: 14px; height: 14px; }
+.mClose:hover, .mClose:focus { color: #fff; background: rgba(255,255,255,0.06); outline: none; }
+.mItem { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; width: 100%; background: none; color: #bbb; border: none; border-radius: 0; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 500; margin: 0; text-align: left; font-family: inherit; -webkit-transition: background 0.1s, color 0.1s; transition: background 0.1s, color 0.1s; }
+.mItem:hover, .mItem:focus { background: rgba(255,255,255,0.1); color: #fff; outline: none; }
+.mItem.sel { color: #fff; font-weight: 700; }
+.mItem.focus { background: rgba(255,255,255,0.14); color: #fff; }
+
+/* ======================================================================
+   SETTINGS PANEL (legacy)
+   ====================================================================== */
+
+#settingsPanel { position: absolute; top: 7%; right: 5%; width: 300px; max-height: 84%; overflow-y: auto; background: rgba(18,18,18,0.96); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; z-index: 8; display: none; -webkit-box-shadow: 0 8px 40px rgba(0,0,0,0.9); box-shadow: 0 8px 40px rgba(0,0,0,0.9); }
+#settingsPanel.show { display: block; }
+#setHeader { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.setClose { float: right; background: none; border: none; color: #666; cursor: pointer; padding: 2px 6px; }
+.setClose:hover, .setClose:focus { color: #fff; }
+.setSec { margin-bottom: 12px; }
+.setLabel { color: #666; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700; }
+.setRow { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.setRow button { background: rgba(255,255,255,0.06); color: #ccc; border: 1px solid transparent; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; margin: 0 6px 6px 0; font-family: inherit; -webkit-transition: background 0.12s; transition: background 0.12s; }
+.setRow button:hover, .setRow button:focus { background: #C4001A; outline: none; }
+.setRow button.sel { background: #C4001A; border-color: #C4001A; color: #fff; }
+.setVal { color: #ccc; font-size: 16px; padding: 8px 12px; display: inline-block; min-width: 50px; text-align: center; }
+.setBtn2 { background: rgba(255,255,255,0.08) !important; min-width: 50px; }
+
+/* ======================================================================
+   TV MODE
+   ====================================================================== */
+
+body.tv #ctrls { padding-bottom: 8px; }
+body.tv #ctrlsRow { -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center; }
+body.tv .cbtn { -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center; display: -webkit-box; display: -webkit-flex; display: flex; }
+body.tv #pbar { margin-bottom: 2px; }
+body.tv #vwrap video { max-height: 100vh; }
+body.tv #vwrap.fs video { max-height: 100vh; }
+
+/* TV nav (gestion saisons/épisodes) — vit DANS la barre du player (#ctrls) :
+   elle suit son fondu (aucune règle d'opacité séparée nécessaire) et ne
+   recouvre jamais les autres éléments du player. */
+#tvnav { display: none; text-align: center; white-space: nowrap; }
+body.tv #tvnav { display: block; padding: 0 4% 14px; }
+#tvnav .tvnwrap { display: inline-block; background: rgba(10,10,10,0.88); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 8px 14px; }
+#tvnav button { display: inline-block; background: rgba(255,255,255,0.08); color: #e5e5e5; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 600; margin: 0 4px; font-family: inherit; letter-spacing: 0.3px; -webkit-transition: background 0.15s, color 0.15s, border-color 0.15s; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+#tvnav button:hover, #tvnav button:focus { background: #C4001A; border-color: #C4001A; color: #fff; outline: none; -webkit-transform: scale(1.04); transform: scale(1.04); }
+#tvnav .lbl { color: #fff; font-size: 15px; margin: 0 8px; vertical-align: middle; font-weight: 700; letter-spacing: 0.5px; }
+
+/* Messages de chargement au-dessus de la vidéo plein écran */
+#pmsg { position: fixed; bottom: 24%; left: 0; right: 0; text-align: center; color: #aaa; font-size: 15px; z-index: 12; pointer-events: none; }
+
+/* ======================================================================
+   MISC
+   ====================================================================== */
+
+#subsPanel { display: none; }
+select { background: #1A1A1A; color: #fff; border: 1px solid #222; border-radius: 4px; padding: 10px 16px; font-size: 15px; margin-right: 10px; font-family: inherit; }
+
+/* ===== Popups sources / sous-titres : panneaux dans le player, design "pastille" ===== */
+#sources, #subsPanel { display: none; position: absolute; right: 4%; bottom: 150px; width: 360px; max-width: 92%; max-height: 55vh; overflow-y: auto; background: rgba(18,18,18,0.98); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 8px 0; -webkit-box-shadow: 0 8px 40px rgba(0,0,0,0.9); box-shadow: 0 8px 40px rgba(0,0,0,0.9); }
+#sources.show, #subsPanel.show { display: block; }
+#sources button, #subsPanel button { display: block; width: 100%; background: none; color: #bbb; border: none; border-left: 3px solid transparent; text-align: left; padding: 11px 16px 11px 20px; cursor: pointer; font-size: 14px; font-weight: 500; font-family: inherit; -webkit-transition: background 0.1s, color 0.1s; transition: background 0.1s, color 0.1s; }
+#sources button:hover, #sources button:focus, #subsPanel button:hover, #subsPanel button:focus { background: rgba(255,255,255,0.1); color: #fff; outline: none; }
+#sources button.sel, #subsPanel button.sel { color: #fff; font-weight: 700; border-left-color: #C4001A; background: rgba(196,0,26,0.12); }
+body.tv #sources, body.tv #subsPanel { width: 480px; bottom: 170px; }
+body.tv #sources button, body.tv #subsPanel button { font-size: 22px; padding: 15px 24px 15px 28px; }
+
+/* TV middle overlay */
+#tvmid { position: absolute; top: 42%; left: 0; right: 0; text-align: center; z-index: 6; opacity: 0; pointer-events: none; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }
+#tvmid.show { opacity: 1; }
+#tvmid button { display: inline-block; background: rgba(0,0,0,0.6); color: #fff; border: 3px solid rgba(255,255,255,0.8); border-radius: 50%; width: 110px; height: 110px; cursor: pointer; font-size: 24px; margin: 0 16px; font-family: inherit; vertical-align: middle; line-height: 1.2; -webkit-transition: -webkit-transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s; }
+#tvMPlay { width: 150px !important; height: 150px !important; font-size: 30px !important; border-width: 5px !important; }
+#tvmid button:hover, #tvmid button:focus { background: #C4001A; outline: none; -webkit-transform: scale(1.08); transform: scale(1.08); }
+
+body.no-cur, body.no-cur * { cursor: none !important; }
+body.fs { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 9999; }
+body.fs main { padding: 0; padding-top: 0; }
+body.fs #vwrap { height: 100%; }
+
+/* ======================================================================
+   TV 10-FOOT UI — body.tv (TV Samsung/LG 2014 détectée par lite-common)
+   Échelle ×1.25 uniforme
+   ====================================================================== */
+body.tv { font-size: 22px; }
+body.tv header { height: 110px; }
+body.tv header h1 img { height: 56px; }
+body.tv nav button { font-size: 30px; padding: 13px 33px; }
+body.tv #navFs svg { width: 32px; height: 32px; }
+body.tv main { padding-top: 110px; }
+body.tv .row-section { padding: 25px 4% 60px; }
+body.tv .row-title { font-size: 38px; margin-bottom: 25px; }
+body.tv .row-title em { font-size: 25px; margin-left: 15px; }
+body.tv .row-scroll { padding: 28px 0 45px; margin: -28px 0 -40px; }
+body.tv .card .t { font-size: 30px; margin-top: 18px; }
+body.tv .card .m { font-size: 24px; margin-top: 10px; }
+body.tv .card .badge { font-size: 20px; padding: 5px 13px; top: 13px; right: 13px; }
+body.tv #msg { font-size: 28px; padding: 40px 0; }
+body.tv #hint { font-size: 23px; padding: 25px 0 40px; }
+
+/* Hero */
+body.tv .hero-title { font-size: 54px; margin-bottom: 18px; }
+body.tv .hero-badge { font-size: 16px; letter-spacing: 3px; margin-bottom: 14px; }
+body.tv .hero-meta { font-size: 20px; margin-bottom: 22px; }
+body.tv .hero-desc { font-size: 22px; line-height: 1.5; margin-bottom: 28px; }
+body.tv .hero-content { max-width: 680px; }
+body.tv .hero-btn { font-size: 22px; padding: 16px 38px; }
+body.tv .hero-dot { width: 12px; height: 12px; }
+
+/* Search */
+body.tv #q { font-size: 33px; padding: 23px 33px; }
+body.tv #sbtn { font-size: 33px; padding: 23px 50px; }
+body.tv .btn { font-size: 28px; padding: 18px 38px; }
+body.tv select { font-size: 28px; padding: 18px 25px; }
+
+/* ===== Player TV ===== */
+body.tv #vttitle { font-size: 36px; }
+body.tv #vtsub { font-size: 16px; padding: 6px 14px; letter-spacing: 2px; }
+body.tv #vtop { padding: 64px 5% 100px; }
+body.tv #sub { font-size: 2.2em; }
+body.tv #ptime { font-size: 20px; margin: 0 18px; }
+body.tv .cbtn { padding: 14px; }
+body.tv .cbtn svg { width: 34px; height: 34px; }
+body.tv .cbtn .csp { font-size: 13px; bottom: 3px; }
+body.tv #btnPlay { width: 74px; height: 74px; }
+body.tv #btnPlay svg { width: 40px; height: 40px; }
+body.tv #btnSpeed { font-size: 20px; padding: 12px 14px; }
+body.tv #zoomLbl { font-size: 20px; }
+body.tv #pbar { height: 5px; margin-bottom: 18px; }
+body.tv #pbar:hover { height: 8px; }
+body.tv #pthumb { width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+body.tv #spinner { width: 72px; height: 72px; margin: -36px 0 0 -36px; border-width: 4px; }
+body.tv #pstate { font-size: 24px; }
+body.tv #tvnav button { font-size: 20px; padding: 12px 24px; }
+body.tv #tvnav .lbl { font-size: 22px; margin: 0 12px; }
+body.tv #tvnav .tvnwrap { padding: 10px 18px; }
+body.tv .mBox { width: 420px; bottom: 170px; }
+body.tv .mTitle { font-size: 15px; }
+body.tv .mItem { font-size: 22px; padding: 14px 22px; }
+body.tv .mClose svg { width: 18px; height: 18px; }
+body.tv .setRow button { font-size: 20px; padding: 12px 18px; }
+body.tv .setLabel { font-size: 14px; }
+body.tv .setVal { font-size: 22px; }
+body.tv #pinfo h2 { font-size: 36px; }
+body.tv #phover { font-size: 18px; }
+body.tv #tflash svg { width: 76px; height: 76px; padding: 16px; }
+body.tv #tvmid button { width: 130px; height: 130px; font-size: 28px; }
+body.tv #tvMPlay { width: 180px !important; height: 180px !important; font-size: 36px !important; }
+body.tv #ctrls { padding: 64px 4% 24px; }
+
+/* ===== Accueil à la YouTube (body.home) : vignettes paysage 16:9 =====
+   Vignette en haut, titre + méta dessous, échelle ×1.25 → ~3,6 visibles */
+.home .row-scroll .card { width: 26.25vw; margin-right: 1.25vw; -webkit-transform-origin: center bottom; transform-origin: center bottom; }
+.home .card .thumb { position: relative; width: 26.25vw; height: 14.75vw; background: #141414; border-radius: 8px; overflow: hidden; }
+.home .card .thumb img { width: 100%; height: 100%; display: block; -webkit-object-fit: cover; object-fit: cover; } 
+.home .card .t { margin-top: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home .card .t, .home .card .m { max-width: 26.25vw; }
+.home .card .m { font-size: 18px; color: #8f8f8f; margin-top: 6px; }
+.home .card .card-progress { height: 4px; border-radius: 0 0 8px 8px; }
+.home .card .card-progress-fill { height: 100%; background: #C4001A; }
+.home .row-scroll { padding-top: 18px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1400px) {
+  .hero-title { font-size: 42px; }
+}
+@media (max-width: 900px) {
+  .hero, .hero-wrap { height: 60vh; min-height: 350px; }
+  .hero-title { font-size: 32px; }
+  #q { width: 100%; max-width: none; margin-bottom: 12px; }
+  header h1 img { height: 24px; }
+  nav button { font-size: 12px; padding: 4px 8px; }
+}

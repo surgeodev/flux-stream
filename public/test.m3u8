@@ -1,0 +1,8 @@
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-STREAM-INF:BANDWIDTH=263851,CODECS="mp4a.40.2, avc1.4d400d",RESOLUTION=416x234
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear1/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=883189,CODECS="mp4a.40.2, avc1.4d401f",RESOLUTION=640x360
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear4/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=2015033,CODECS="mp4a.40.2, avc1.640028",RESOLUTION=960x540
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear5/prog_index.m3u8
